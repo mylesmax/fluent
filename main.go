@@ -2,11 +2,11 @@ package main
 
 import (
 	"embed"
-	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
@@ -14,18 +14,15 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/darwin/icon.icns
+var iconData []byte
+
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()
 
-	// Read icon file
-	iconData, err := os.ReadFile("frontend/src/assets/images/flntribbon.png")
-	if err != nil {
-		println("Error reading icon:", err.Error())
-	}
-
 	// Create application with options
-	err = wails.Run(&options.App{
+	err := wails.Run(&options.App{
 		Title:  "fluent",
 		Width:  1024,
 		Height: 768,
@@ -52,6 +49,10 @@ func main() {
 			WindowIsTranslucent:  true,
 			DisableWindowIcon:    false,
 			Theme:                windows.SystemDefault,
+		},
+		Linux: &linux.Options{
+			Icon:                iconData,
+			WindowIsTranslucent: true,
 		},
 	})
 
