@@ -2,6 +2,14 @@
     --gradient-color-1: rgba(129, 188, 239, 0.8);
     --gradient-color-2: rgba(85, 155, 232, 0.7);
     --gradient-color-3: rgba(50, 85, 122, 0.6);
+    --cup-outline-color: #ffffff;
+}
+
+:root.light-mode {
+    --cup-outline-color: rgba(96, 71, 51, 0.95);
+    --gradient-color-1: rgba(168, 145, 118, 0.9);
+    --gradient-color-2: rgba(145, 118, 92, 0.8);
+    --gradient-color-3: rgba(121, 96, 76, 0.7);
 }
 
 #cupContainer {

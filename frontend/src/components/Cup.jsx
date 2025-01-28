@@ -124,7 +124,7 @@ const Cup = () => {
                 ctx.stroke();
                 ctx.restore();
             } else {
-                ctx.strokeStyle = '#ffffff';
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cup-outline-color').trim();
                 ctx.stroke();
             }
             ctx.lineWidth = 12;

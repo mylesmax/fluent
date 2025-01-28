@@ -62,12 +62,12 @@
         linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    opacity: 0;
+    opacity: 0.15;
     transition: opacity 0.4s ease;
 }
 
 .profile:hover .card-front::before {
-    opacity: 1;
+    opacity: 0.4;
 }
 
 .profile:not([data-name="Add New"])::before,
@@ -262,5 +262,139 @@
         bottom: 12px;
         right: 12px;
     }
+}
+
+/* Light Mode Styles */
+@keyframes lightGradientAnimation {
+    0% {
+        background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(249, 250, 251, 0.9) 25%,
+            rgba(243, 244, 246, 0.85) 50%,
+            rgba(249, 250, 251, 0.9) 75%,
+            rgba(255, 255, 255, 0.95) 100%
+        );
+        background-position: 0% 50%;
+    }
+    50% {
+        background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(249, 250, 251, 0.9) 25%,
+            rgba(243, 244, 246, 0.85) 50%,
+            rgba(249, 250, 251, 0.9) 75%,
+            rgba(255, 255, 255, 0.95) 100%
+        );
+        background-position: 100% 50%;
+    }
+    100% {
+        background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.95) 0%,
+            rgba(249, 250, 251, 0.9) 25%,
+            rgba(243, 244, 246, 0.85) 50%,
+            rgba(249, 250, 251, 0.9) 75%,
+            rgba(255, 255, 255, 0.95) 100%
+        );
+        background-position: 0% 50%;
+    }
+}
+
+:root.light-mode .profile .card-front {
+    background: linear-gradient(135deg,
+        rgba(193, 175, 157, 0.97) 0%,
+        rgba(168, 145, 118, 0.95) 25%,
+        rgba(145, 118, 92, 0.92) 50%,
+        rgba(168, 145, 118, 0.95) 75%,
+        rgba(193, 175, 157, 0.97) 100%
+    );
+    background-size: 200% 200%;
+    animation: lightGradientAnimation 30s ease-in-out infinite;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(145, 118, 92, 0.6);
+    box-shadow: 
+        0 16px 32px rgba(145, 118, 92, 0.4),
+        0 12px 24px rgba(145, 118, 92, 0.3),
+        inset 0 0 40px rgba(193, 175, 157, 0.7),
+        0 0 55px var(--glow-color-alpha),
+        0 0 35px var(--glow-color);
+}
+
+:root.light-mode .profile:not([data-name="Add New"])::before,
+:root.light-mode .profile:not([data-name="Add New"])::after {
+    background: rgba(145, 118, 92, 0.45);
+    box-shadow: 
+        0 12px 24px rgba(145, 118, 92, 0.35),
+        0 0 35px var(--glow-color-alpha);
+}
+
+:root.light-mode .profile:not([data-name="Add New"]):hover .card-front {
+    background: linear-gradient(135deg,
+        rgba(168, 145, 118, 0.98) 0%,
+        rgba(145, 118, 92, 0.95) 50%,
+        var(--glow-color) 100%
+    );
+    border: 1px solid var(--glow-color);
+    box-shadow: 
+        0 20px 40px rgba(145, 118, 92, 0.45),
+        0 16px 32px rgba(145, 118, 92, 0.35),
+        inset 0 0 50px var(--glow-color),
+        0 0 75px var(--glow-color-alpha),
+        0 0 65px var(--glow-color),
+        0 0 85px var(--glow-color-alpha);
+}
+
+:root.light-mode .profile[data-name="Add New"] .card-front {
+    background: linear-gradient(135deg,
+        rgba(193, 175, 157, 0.97) 0%,
+        rgba(168, 145, 118, 0.95) 25%,
+        rgba(145, 118, 92, 0.92) 50%,
+        rgba(168, 145, 118, 0.95) 75%,
+        rgba(193, 175, 157, 0.97) 100%
+    );
+    background-size: 200% 200%;
+    animation: lightGradientAnimation 30s ease-in-out infinite;
+    border: 2px dashed var(--glow-color-alpha);
+    box-shadow: 
+        0 12px 24px rgba(145, 118, 92, 0.3),
+        inset 0 0 35px rgba(193, 175, 157, 0.6),
+        0 0 45px var(--glow-color-alpha);
+}
+
+:root.light-mode .profile[data-name="Add New"]:hover .card-front {
+    background: linear-gradient(135deg,
+        var(--glow-color-alpha) 0%,
+        var(--glow-color) 50%,
+        var(--glow-color-alpha) 100%
+    );
+    border: 2px dashed var(--glow-color);
+    box-shadow: 
+        0 16px 32px var(--glow-color),
+        inset 0 0 45px var(--glow-color),
+        0 0 75px var(--glow-color-alpha);
+}
+
+:root.light-mode .profile-name {
+    color: rgba(96, 71, 51, 0.95);
+    text-shadow: 
+        0 2px 4px rgba(145, 118, 92, 0.4),
+        0 0 20px var(--glow-color-alpha);
+}
+
+:root.light-mode .profile-description {
+    color: rgba(96, 71, 51, 0.7);
+}
+
+:root.light-mode .profile:hover .profile-name {
+    color: rgba(96, 71, 51, 1);
+    text-shadow: 
+        0 0 35px var(--glow-color),
+        0 0 65px var(--glow-color-alpha),
+        0 0 85px var(--glow-color);
+}
+
+:root.light-mode .profile[data-name="Add New"]:hover .profile-name {
+    color: rgba(96, 71, 51, 1);
+    text-shadow: 
+        0 0 35px var(--glow-color),
+        0 0 65px var(--glow-color-alpha);
 }
 
