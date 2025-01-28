@@ -12,23 +12,6 @@
     --gradient-color-3: rgba(121, 96, 76, 0.7);
 }
 
-#cupContainer {
-    width: 80px;
-    height: 80px;
-    position: relative;
-    cursor: pointer;
-    margin: -10px 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transform: translateY(15px);
-}
-
-#cupCanvas {
-    width: 80px;
-    height: 80px;
-    display: block;
-}
 
 #cupInfo {
     position: absolute;

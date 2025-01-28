@@ -14,7 +14,7 @@ const Cup = () => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
-        const cupWidth = 110;
+        const cupWidth = 120;
         const cupHeight = 140;
 
         // Setup canvas
@@ -46,7 +46,7 @@ const Cup = () => {
 
             ctx.fillStyle = gradient;
             if (width > 0 && height > 0) {
-                ctx.fillRect(x, y, width, height);
+            ctx.fillRect(x, y, width, height);
             }
 
             //wavy wavy wavuy
@@ -125,9 +125,9 @@ const Cup = () => {
                 ctx.restore();
             } else {
                 ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cup-outline-color').trim();
-                ctx.stroke();
+            ctx.stroke();
             }
-            ctx.lineWidth = 12;
+            ctx.lineWidth = 9;
         };
 
         const animate = () => {

@@ -302,7 +302,7 @@ body, html {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transform: translate(-8px, 25px) !important;
+    transform: translate(-8px, 32px) !important;
 }
 
 #cupCanvas {
@@ -515,7 +515,7 @@ body.fade-out {
     #cupContainer {
         width: 85px !important;
         height: 100px !important;
-        transform: translate(-12px, 25px) !important;
+        transform: translate(-8px, 28px) !important;
     }
     #cupCanvas {
         width: 85px !important;
@@ -531,6 +531,10 @@ body.fade-out {
     }
     .profile {
         height: 155px;
+    }
+    .flnt-logo {
+        width: 75px;
+        height: 75px;
     }
 }
 
@@ -575,6 +579,10 @@ body.fade-out {
         height: 150px;
         min-width: 180px;
         max-width: 240px;
+    }
+    .flnt-logo {
+        width: 55px;
+        height: 55px;
     }
 }
 
@@ -621,6 +629,10 @@ body.fade-out {
         min-width: 200px;
         max-width: 280px;
     }
+    .flnt-logo {
+        width: 40px;
+        height: 40px;
+    }
 }
 
 @media (max-width: 400px) {
@@ -639,6 +651,10 @@ body.fade-out {
     #cupCanvas {
         width: 32px !important;
         height: 40px !important;
+    }
+    .flnt-logo {
+        width: 30px;
+        height: 30px;
     }
 }
 
