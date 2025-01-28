@@ -1,0 +1,286 @@
+.profile-icon {
+    width: 40px;
+    height: 40px;
+    color: #ffffff;
+}
+
+.profile-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    overflow-y: auto;
+    margin-top: -20px;
+    transition: margin-top 0.3s ease, padding 0.3s ease;
+}
+
+.profile {
+    width: calc(31% - 140px);
+    height: 200px;
+    position: relative;
+    margin: 10px;
+    cursor: pointer;
+    perspective: 1000px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+}
+
+.card-front {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(255, 192, 203, 0.15), rgba(255, 182, 193, 0.25));
+    backdrop-filter: blur(10px);
+    padding: 15px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 3;
+    border: 1px solid rgba(255, 192, 203, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.profile.selected {
+    transform: scale(1.03);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.profile:not(.selected) {
+    opacity: 1;
+}
+
+.profile-list.has-selected .profile:not(.selected):hover {
+    opacity: 1;
+}
+
+.profile:not(.selected) .card-front:hover {
+    border: 1px solid rgba(255, 192, 203, 0.25);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.profile:not([data-name="Add New"])::before,
+.profile:not([data-name="Add New"])::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.1);
+    top: 5px;
+    left: 5px;
+    z-index: 1;
+    transition: all 0.3s ease;
+}
+
+.profile:not([data-name="Add New"])::after {
+    top: 10px;
+    left: 10px;
+    z-index: 2;
+}
+
+.profile:not([data-name="Add New"]):hover {
+    transform: translateY(-5px) rotate(3deg);
+}
+
+.profile:not([data-name="Add New"]):hover::before {
+    transform: translateY(5px) rotate(-2deg);
+}
+
+.profile:not([data-name="Add New"]):hover::after {
+    transform: translateY(10px) rotate(-4deg);
+}
+
+.profile:not([data-name="Add New"]):hover .card-front {
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.profile[data-name="Add New"] {
+    transform: none;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile[data-name="Add New"] .card-front {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.1));
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile[data-name="Add New"]:hover {
+    transform: translateY(-8px);
+}
+
+.profile[data-name="Add New"]:hover .card-front {
+    background: linear-gradient(135deg, 
+        rgba(72, 255, 167, 0.1),
+        rgba(72, 255, 167, 0.2)
+    );
+    border: 2px solid rgba(72, 255, 167, 0.4);
+    box-shadow: 
+        0 15px 30px rgba(72, 255, 167, 0.1),
+        0 0 0 1px rgba(72, 255, 167, 0.2),
+        inset 0 0 0 1px rgba(72, 255, 167, 0.2);
+}
+
+.profile[data-name="Add New"]:hover .card-front::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+        800px circle at var(--mouse-x) var(--mouse-y),
+        rgba(72, 255, 167, 0.1),
+        transparent 40%
+    );
+}
+
+.profile[data-name="Add New"]:hover .profile-name {
+    color: rgba(72, 255, 167, 1);
+    text-shadow: 0 0 20px rgba(72, 255, 167, 0.5);
+    transform: scale(1.05);
+}
+
+.profile[data-name="Add New"] .profile-name {
+    color: rgb(255, 255, 255);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 24px;
+    position: absolute;
+    top: 20px;
+    left: 15px;
+    max-width: calc(100%);
+    word-wrap: break-word;
+}
+
+.profile[data-name="Add New"] .profile-emoji {
+    font-size: 48px;
+    position: absolute;
+    bottom: 0;
+    right: 15px;
+    transition: font-size 0.3s ease;
+}
+
+.profile[data-name="Add New"]:hover .profile-emoji {
+    transform: scale(1.2);
+    filter: drop-shadow(0 0 20px rgba(72, 255, 167, 0.5));
+}
+
+.profile-name {
+    color: rgba(255, 255, 255, 0.9);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 24px;
+    position: absolute;
+    top: 20px;
+    left: 15px;
+    max-width: calc(100% - 30px);
+    word-wrap: break-word;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.profile:not([data-name="Add New"]) .profile-emoji {
+    font-size: 48px;
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+    transition: font-size 0.3s ease;
+}
+
+@media (max-width: 1100px) {
+    .profile-list {
+        margin-top: -40px;
+    }
+    .profile {
+        width: calc(33% - 140px);
+    }
+}
+
+@media (max-width: 745px) {
+    .profile-list {
+        margin-top: -40px;
+        padding: 15px;
+    }
+    .profile {
+        width: calc(50% - 20px);
+        height: 150px;
+    }
+}
+
+@media (max-width: 400px) {
+    .profile-list {
+        margin-top: -30px;
+    }
+    .profile {
+        width: calc(100% - 20px);
+    }
+}
+
+.delete-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+}
+
+.profile:hover .delete-button {
+    opacity: 1;
+}
+
+.delete-button:hover {
+    background: rgba(255, 82, 82, 0.2);
+    color: rgba(255, 82, 82, 1);
+}
+
+.bubbles {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.bubble {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.bubble.blue {
+    background: rgba(0, 122, 255, 0.15);
+    color: rgba(0, 122, 255, 0.9);
+    border: 1px solid rgba(0, 122, 255, 0.3);
+}
+
+.bubble.green {
+    background: rgba(52, 199, 89, 0.15);
+    color: rgba(52, 199, 89, 0.9);
+    border: 1px solid rgba(52, 199, 89, 0.3);
+}
+
+.bubble:hover {
+    transform: scale(1.1);
+} 

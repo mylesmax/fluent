@@ -1,0 +1,64 @@
+:root {
+    --gradient-color-1: rgba(129, 188, 239, 0.8);
+    --gradient-color-2: rgba(85, 155, 232, 0.7);
+    --gradient-color-3: rgba(50, 85, 122, 0.6);
+}
+
+#cupContainer {
+    width: 80px;
+    height: 80px;
+    position: relative;
+    cursor: pointer;
+    margin: -10px 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(15px);
+}
+
+#cupCanvas {
+    width: 80px;
+    height: 80px;
+    display: block;
+}
+
+#cupInfo {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    text-align: center;
+    color: rgba(106, 198, 241, 0.87);
+    font-size: 14px;
+    font-style: italic;
+    opacity: 0;
+    transition: opacity 0.3s ease, text-shadow 0.3s ease;
+    pointer-events: none;
+    text-shadow:
+        0 0 2px rgba(106, 198, 241, 0.2),
+        0 0 5px rgba(106, 198, 241, 0.3),
+        0 0 7px rgba(106, 198, 241, 0.1);
+}
+
+#cupInfo.visible {
+    opacity: 1;
+}
+
+#cupInfo.golden {
+    color: rgba(255, 215, 0, 0.87);
+    text-shadow:
+        0 0 5px rgba(255, 215, 0, 0.2),
+        0 0 10px rgba(255, 215, 0, 0.3),
+        0 0 15px rgba(255, 215, 0, 0.1);
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateY(15px) translateX(0); }
+    25% { transform: translateY(15px) translateX(-5px); }
+    75% { transform: translateY(15px) translateX(5px); }
+}
+
+.shaking {
+    animation: shake 0.5s ease-in-out;
+} 

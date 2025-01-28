@@ -1,0 +1,24 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "fluent",
+  "outputfilename": "fluent",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "mylesmax",
+    "email": "maxmiller@wustl.edu"
+  },
+  "info": {
+    "productName": "Fluent",
+    "productVersion": "1.0.0",
+    "copyright": "© 2025 mylesmax",
+    "comments": "Built with Wails"
+  },
+  "nsisType": "multiple",
+  "icon": {
+    "path": "frontend/src/assets/images/flntribbon.png",
+    "sizes": [16, 32, 48, 64, 128, 256]
+  }
+}

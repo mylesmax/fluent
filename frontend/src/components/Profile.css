@@ -1,0 +1,266 @@
+.profile {
+    width: 280px;
+    height: 180px;
+    position: relative;
+    cursor: pointer;
+    perspective: 1000px;
+    opacity: 1;
+    transform-origin: center bottom;
+    margin: 0 auto;
+    will-change: transform;
+}
+
+.profile.loaded {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile:not([data-name="Add New"]):hover {
+    transform: translateY(-5px) rotate(3deg);
+    z-index: 5;
+}
+
+.card-front {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 15px;
+    background: linear-gradient(135deg,
+        rgba(88, 28, 135, 0.15) 0%,
+        rgba(147, 51, 234, 0.2) 100%
+    );
+    backdrop-filter: blur(12px);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid var(--glow-color-alpha);
+    box-shadow: 
+        0 4px 6px rgba(0, 0, 0, 0.1),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 0 20px var(--glow-color-alpha);
+    will-change: transform, box-shadow;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile.loaded .card-front {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-front::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 15px;
+    padding: 1px;
+    background: var(--glow-color);
+    -webkit-mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+    mask: 
+        linear-gradient(#fff 0 0) content-box, 
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.profile:hover .card-front::before {
+    opacity: 1;
+}
+
+.profile:not([data-name="Add New"])::before,
+.profile:not([data-name="Add New"])::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    top: 5px;
+    left: 5px;
+    z-index: -1;
+    transition: all 0.3s ease;
+}
+
+.profile:not([data-name="Add New"])::after {
+    top: 10px;
+    left: 10px;
+    z-index: -2;
+}
+
+.profile:not([data-name="Add New"]):hover::before {
+    transform: translateY(5px) rotate(-2deg);
+}
+
+.profile:not([data-name="Add New"]):hover::after {
+    transform: translateY(10px) rotate(-4deg);
+}
+
+.profile:not([data-name="Add New"]):hover .card-front {
+    background: linear-gradient(135deg,
+        var(--glow-color-alpha) 0%,
+        var(--glow-color-dim) 100%
+    );
+    border: 1px solid var(--glow-color);
+    box-shadow: 
+        0 10px 20px rgba(0, 0, 0, 0.1),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+        0 0 35px var(--glow-color-alpha),
+        0 0 25px var(--glow-color-dim),
+        0 0 45px var(--glow-color-alpha);
+}
+
+.profile[data-name="Add New"] {
+    --glow-color: rgba(52, 211, 153, 0.5);
+    --glow-color-alpha: rgba(52, 211, 153, 0.15);
+    --glow-color-dim: rgba(52, 211, 153, 0.3);
+}
+
+.profile[data-name="Add New"] .card-front {
+    background: linear-gradient(135deg,
+        rgba(88, 28, 135, 0.15) 0%,
+        rgba(147, 51, 234, 0.2) 100%
+    );
+    border: 2px dashed rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.profile[data-name="Add New"]:hover {
+    transform: translateY(-8px);
+}
+
+.profile[data-name="Add New"]:hover .card-front {
+    background: linear-gradient(135deg,
+        var(--glow-color-alpha) 0%,
+        var(--glow-color-dim) 100%
+    );
+    border: 2px dashed var(--glow-color);
+    box-shadow: 
+        0 6px 12px var(--glow-color-alpha),
+        inset 0 0 0 1px var(--glow-color-dim),
+        0 0 30px var(--glow-color-alpha);
+}
+
+.profile[data-name="Add New"] .card-front::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle at center,
+        var(--glow-color-alpha) 0%,
+        transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.profile[data-name="Add New"]:hover .card-front::after {
+    opacity: 1;
+}
+
+.profile-name {
+    color: rgba(255, 255, 255, 0.9);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 24px;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    max-width: calc(100% - 40px);
+    word-wrap: break-word;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.profile:hover .profile-name {
+    text-shadow: 0 0 15px var(--glow-color);
+}
+
+.profile[data-name="Add New"]:hover .profile-name {
+    color: rgba(255, 255, 255, 1);
+    text-shadow: 0 0 15px var(--glow-color);
+}
+
+.profile-description {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 16px;
+    line-height: 1.4;
+    position: absolute;
+    top: 60px;
+    left: 20px;
+    max-width: calc(100% - 40px);
+}
+
+.profile-emoji {
+    font-size: 36px;
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.profile:hover .profile-emoji {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 15px var(--glow-color));
+}
+
+.profile[data-name="Add New"] .profile-emoji {
+    position: absolute;
+    bottom: 30px;
+    right: 50%;
+    transform: translateX(50%);
+}
+
+.profile[data-name="Add New"]:hover .profile-emoji {
+    transform: translateX(50%) scale(1.1);
+}
+
+/* Media Queries */
+@media (max-width: 600px) {
+    .profile {
+        width: 240px;
+        height: 160px;
+    }
+    .profile-name {
+        font-size: 20px;
+    }
+    .profile-description {
+        font-size: 14px;
+        top: 55px;
+    }
+    .profile-emoji {
+        font-size: 32px;
+        bottom: 15px;
+        right: 15px;
+    }
+}
+
+@media (max-width: 400px) {
+    .profile {
+        width: 220px;
+        height: 140px;
+    }
+    .profile-name {
+        font-size: 18px;
+        top: 15px;
+        left: 15px;
+    }
+    .profile-description {
+        font-size: 12px;
+        top: 45px;
+        left: 15px;
+    }
+    .profile-emoji {
+        font-size: 28px;
+        bottom: 12px;
+        right: 12px;
+    }
+}
+

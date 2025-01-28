@@ -1,0 +1,102 @@
+.theme-toggle {
+    background: transparent;
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-toggle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.theme-toggle:hover::before {
+    opacity: 1;
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle-icon {
+    width: 20px;
+    height: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle:hover .theme-toggle-icon {
+    transform: rotate(15deg);
+}
+
+/* Light mode styles */
+:root.light-mode {
+    color-scheme: light;
+}
+
+:root.light-mode .v0_3 {
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.95) 0%,
+        rgba(249, 250, 251, 0.9) 25%,
+        rgba(243, 244, 246, 0.85) 50%,
+        rgba(249, 250, 251, 0.9) 75%,
+        rgba(255, 255, 255, 0.95) 100%
+    );
+}
+
+:root.light-mode .theme-toggle {
+    color: rgba(15, 23, 42, 0.9);
+}
+
+:root.light-mode .theme-toggle::before {
+    background: rgba(15, 23, 42, 0.06);
+}
+
+:root.light-mode .header {
+    background: rgba(255, 255, 255, 0.7);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+:root.light-mode .profile-name {
+    color: rgba(15, 23, 42, 0.9);
+}
+
+:root.light-mode .profile-description {
+    color: rgba(15, 23, 42, 0.7);
+}
+
+:root.light-mode .card-front {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+:root.light-mode .profile:not([data-name="Add New"])::before,
+:root.light-mode .profile:not([data-name="Add New"])::after {
+    background: rgba(15, 23, 42, 0.03);
+}
+
+:root.light-mode .profile[data-name="Add New"] .card-front {
+    border: 2px dashed rgba(15, 23, 42, 0.2);
+}
+
+:root.light-mode .menu-button i, 
+:root.light-mode .user-button i {
+    color: rgba(15, 23, 42, 0.9);
+}
+
+:root.light-mode .menu-button::before, 
+:root.light-mode .user-button::before {
+    background: rgba(15, 23, 42, 0.06);
+} 

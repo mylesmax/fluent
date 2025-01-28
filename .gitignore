@@ -1,6 +1,5 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
+#Started with github template
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -23,3 +22,16 @@ go.work.sum
 
 # env file
 .env
+
+# Build output
+build/bin/
+
+# Dependencies
+node_modules/
+
+# Frontend build
+frontend/dist/
+
+# Project files
+ref/
+*.pdf
