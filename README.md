@@ -12,7 +12,7 @@ Fluent is a lightweight desktop application that revolutionizes how you learn. B
 ![Fluent Interface](/sample/landing1.jpg)
 
 ### Light Mode
-![Fluent Interface](/sample/landing2.jpg)
+![Fluent Interface](/sample/landingLight.jpg)
 
 ## Getting Started
 In progress!
