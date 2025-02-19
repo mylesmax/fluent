@@ -21,7 +21,7 @@ const Header = () => {
   return (
     <header className="header">
       <div className="menu-section">
-        <button className="menu-button">
+        <button className="user-button">
           <i className="ri-settings-3-line"></i>
         </button>
         <button className="user-button">

@@ -5,6 +5,7 @@ import { Greet } from "../wailsjs/go/main/App";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import Cup from './components/Cup';
 import Profile from './components/Profile';
+import ProfileMenu from './components/ProfileMenu';
 import rd1 from './assets/gifs/rd1.gif';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [showMainContent, setShowMainContent] = useState(false);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
     
     const profiles = [
         { name: 'BIO123', emoji: '🔬', glowColor: 'rgba(129, 140, 248, 0.5)' },
@@ -48,7 +50,13 @@ function App() {
             console.log("Add new profile clicked");
         } else {
             setSelectedProfile(profile);
+            setShowProfileMenu(true);
         }
+    };
+
+    const handleCloseMenu = () => {
+        setShowProfileMenu(false);
+        setSelectedProfile(null);
     };
 
     const handleDelete = (e, profile) => {
@@ -77,6 +85,13 @@ function App() {
                     </div>
                 </div>
             </div>
+
+            {showProfileMenu && selectedProfile && (
+                <ProfileMenu 
+                    profile={selectedProfile}
+                    onClose={handleCloseMenu}
+                />
+            )}
 
             {(isLoading || isTransitioning) && (
                 <div className={`loading-screen ${isTransitioning ? 'fade-out' : ''}`}>
