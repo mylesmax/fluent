@@ -199,4 +199,194 @@
 
 :root.light-mode .menu-button.edit {
     background: linear-gradient(135deg, rgba(236, 72, 153, 0.3), rgba(236, 72, 153, 0.2));
+}
+
+.profile-name-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.profile-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 24px;
+    font-weight: 600;
+    padding: 4px 0;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.profile-name-input:focus {
+    outline: none;
+    border-bottom-color: rgba(255, 255, 255, 0.8);
+}
+
+.edit-name-button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+}
+
+.edit-name-button:hover {
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.edit-name-button.saving {
+    color: rgb(34, 197, 94);
+}
+
+.edit-name-button.saving:hover {
+    color: rgb(22, 163, 74);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+:root.light-mode .profile-name-input {
+    color: rgba(0, 0, 0, 0.9);
+    border-bottom-color: rgba(0, 0, 0, 0.2);
+}
+
+:root.light-mode .profile-name-input:focus {
+    border-bottom-color: rgba(0, 0, 0, 0.6);
+}
+
+:root.light-mode .edit-name-button {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+:root.light-mode .edit-name-button:hover {
+    color: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.menu-button-label.learn {
+    color: rgba(129, 140, 248, 0.9);
+}
+
+.menu-button-label.review {
+    color: rgba(52, 211, 153, 0.9);
+}
+
+.menu-button:hover + .menu-button-label.learn {
+    color: rgb(129, 140, 248);
+    text-shadow: 0 0 10px rgba(129, 140, 248, 0.5);
+}
+
+.menu-button:hover + .menu-button-label.review {
+    color: rgb(52, 211, 153);
+    text-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+}
+
+.label-flasher-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    margin-left: auto;
+}
+
+.label-flasher-button:hover {
+    background: rgba(236, 72, 153, 0.1);
+}
+
+.label-flasher-button .button-icon {
+    height: 24px;
+    width: auto;
+    transition: all 0.3s ease;
+    filter: brightness(0) invert(1);
+    opacity: 0.7;
+}
+
+.label-flasher-button:hover .button-icon {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.label-flasher-tooltip {
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%) translateX(100%) scale(0.95);
+    background: rgba(236, 72, 153, 0.9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.label-flasher-tooltip::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 8px;
+    height: 8px;
+    background: rgba(236, 72, 153, 0.9);
+}
+
+.label-flasher-button:hover .label-flasher-tooltip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(100%) scale(1);
+}
+
+:root.light-mode .label-flasher-button .button-icon {
+    filter: brightness(0);
+    opacity: 0.6;
+}
+
+:root.light-mode .label-flasher-button:hover {
+    background: rgba(236, 72, 153, 0.1);
+}
+
+:root.light-mode .menu-button-label.learn {
+    color: rgba(79, 70, 229, 0.9);
+}
+
+:root.light-mode .menu-button-label.review {
+    color: rgba(22, 163, 74, 0.9);
+}
+
+:root.light-mode .menu-button:hover + .menu-button-label.learn {
+    color: rgb(79, 70, 229);
+    text-shadow: 0 0 10px rgba(79, 70, 229, 0.3);
+}
+
+:root.light-mode .menu-button:hover + .menu-button-label.review {
+    color: rgb(22, 163, 74);
+    text-shadow: 0 0 10px rgba(22, 163, 74, 0.3);
+}
+
+.profile-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
 } 

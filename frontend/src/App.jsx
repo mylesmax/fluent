@@ -14,14 +14,13 @@ function App() {
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [showMainContent, setShowMainContent] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    
-    const profiles = [
+    const [profiles, setProfiles] = useState([
         { name: 'BIO123', emoji: '🔬', glowColor: 'rgba(129, 140, 248, 0.5)' },
         { name: 'ESE234', emoji: '⚡️', glowColor: 'rgba(52, 211, 153, 0.5)' },
         { name: 'BME456', emoji: '🧑‍💻', glowColor: 'rgba(251, 146, 60, 0.5)' },
         { name: 'SCIENCE', emoji: '🧪', glowColor: 'rgba(236, 72, 153, 0.5)' },
         { name: 'Add New', emoji: '➕', glowColor: 'rgba(52, 211, 153, 0.5)' }
-    ];
+    ]);
 
     useEffect(() => {
         document.documentElement.classList.remove('light-mode');
@@ -59,6 +58,17 @@ function App() {
         setSelectedProfile(null);
     };
 
+    const handleUpdateProfileName = (oldName, newName) => {
+        setProfiles(prevProfiles => 
+            prevProfiles.map(profile => 
+                profile.name === oldName 
+                    ? { ...profile, name: newName }
+                    : profile
+            )
+        );
+        setSelectedProfile(prev => ({ ...prev, name: newName }));
+    };
+
     const handleDelete = (e, profile) => {
         e.stopPropagation();
         console.log('Delete profile:', profile.name);
@@ -90,6 +100,7 @@ function App() {
                 <ProfileMenu 
                     profile={selectedProfile}
                     onClose={handleCloseMenu}
+                    onUpdateName={handleUpdateProfileName}
                 />
             )}
 
