@@ -1,9 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import ThemeToggle from './ThemeToggle';
 import Cup from './Cup';
+import SettingsModal from './SettingsModal';
+import UserProfileModal from './UserProfileModal';
 import flntLogo from '../assets/images/flntribbon.png';
 
 const Header = () => { 
+  const [showSettings, setShowSettings] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+
   useEffect(() => {
     const header = document.querySelector('.header');
     const handleMouseMove = (e) => {
@@ -19,27 +24,32 @@ const Header = () => {
   }, []);
 
   return (
-    <header className="header">
-      <div className="menu-section">
-        <button className="user-button">
-          <i className="ri-settings-3-line"></i>
-        </button>
-        <button className="user-button">
-          <i className="ri-user-line"></i>
-        </button>
-      </div>
-      <div className="logo-container">
-        <img src={flntLogo} alt="flnt" className="flnt-logo" />
-        <div className="logo">
-          <span>fl</span>
-          <Cup />
-          <span>ent</span>
+    <>
+      <header className="header">
+        <div className="menu-section">
+          <button className="user-button" onClick={() => setShowSettings(true)}>
+            <i className="ri-settings-3-line"></i>
+          </button>
+          <button className="user-button" onClick={() => setShowUserProfile(true)}>
+            <i className="ri-user-line"></i>
+          </button>
         </div>
-      </div>
-      <div className="theme-section">
-        <ThemeToggle />
-      </div>
-    </header>
+        <div className="logo-container">
+          <img src={flntLogo} alt="flnt" className="flnt-logo" />
+          <div className="logo">
+            <span>fl</span>
+            <Cup />
+            <span>ent</span>
+          </div>
+        </div>
+        <div className="theme-section">
+          <ThemeToggle />
+        </div>
+      </header>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showUserProfile && <UserProfileModal onClose={() => setShowUserProfile(false)} />}
+    </>
   );
 };
 
