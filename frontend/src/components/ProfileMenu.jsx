@@ -4,9 +4,10 @@ import mindsetIcon from '../assets/images/mindset.png';
 import readingBookIcon from '../assets/images/reading-book.png';
 import dropperIcon from '../assets/images/dropper.png';
 
-const ProfileMenu = ({ profile, onClose, onUpdateName }) => {
+const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(profile.name);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const saveChanges = () => {
         if (editedName.trim() !== '' && editedName.trim() !== profile.name) {
@@ -40,11 +41,23 @@ const ProfileMenu = ({ profile, onClose, onUpdateName }) => {
         onClose();
     };
 
+    const handleDelete = () => {
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        onDelete(profile.name);
+        onClose();
+    };
+
     return (
         <div className="profile-menu-overlay" onClick={handleOverlayClick}>
             <div className="profile-menu" onClick={e => e.stopPropagation()}>
                 <div className="profile-menu-header">
                     <div className="profile-info">
+                        <button className="delete-button" onClick={handleDelete}>
+                            <i className="ri-delete-bin-line"></i>
+                        </button>
                         <span className="profile-menu-emoji">{profile.emoji}</span>
                         <div className="profile-name-container">
                             {isEditing ? (
@@ -82,6 +95,22 @@ const ProfileMenu = ({ profile, onClose, onUpdateName }) => {
                         <span className="menu-button-label review">REVIEW</span>
                     </div>
                 </div>
+
+                {showDeleteConfirm && (
+                    <div className="delete-confirm-dialog">
+                        <div className="delete-confirm-content">
+                            <p>This action is irreversible! Proceed?</p>
+                            <div className="delete-confirm-buttons">
+                                <button className="confirm-button delete" onClick={confirmDelete}>
+                                    Delete
+                                </button>
+                                <button className="confirm-button cancel" onClick={() => setShowDeleteConfirm(false)}>
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

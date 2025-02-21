@@ -6,6 +6,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 import Cup from './components/Cup';
 import Profile from './components/Profile';
 import ProfileMenu from './components/ProfileMenu';
+import AddClassModal from './components/AddClassModal';
 import rd1 from './assets/gifs/rd1.gif';
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [showMainContent, setShowMainContent] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showAddClass, setShowAddClass] = useState(false);
     const [profiles, setProfiles] = useState([
         { name: 'BIO123', emoji: '🔬', glowColor: 'rgba(129, 140, 248, 0.5)' },
         { name: 'ESE234', emoji: '⚡️', glowColor: 'rgba(52, 211, 153, 0.5)' },
@@ -46,7 +48,7 @@ function App() {
 
     const handleProfileClick = (profile) => {
         if (profile.name === "Add New") {
-            console.log("Add new profile clicked");
+            setShowAddClass(true);
         } else {
             setSelectedProfile(profile);
             setShowProfileMenu(true);
@@ -69,9 +71,20 @@ function App() {
         setSelectedProfile(prev => ({ ...prev, name: newName }));
     };
 
-    const handleDelete = (e, profile) => {
-        e.stopPropagation();
-        console.log('Delete profile:', profile.name);
+    const handleDeleteProfile = (profileName) => {
+        setProfiles(prevProfiles => 
+            prevProfiles.filter(profile => 
+                profile.name === 'Add New' || profile.name !== profileName
+            )
+        );
+    };
+
+    const handleAddClass = (newClass) => {
+        setProfiles(prevProfiles => [
+            ...prevProfiles.slice(0, -1),
+            newClass,
+            prevProfiles[prevProfiles.length - 1]
+        ]);
     };
 
     return (
@@ -101,6 +114,14 @@ function App() {
                     profile={selectedProfile}
                     onClose={handleCloseMenu}
                     onUpdateName={handleUpdateProfileName}
+                    onDelete={handleDeleteProfile}
+                />
+            )}
+
+            {showAddClass && (
+                <AddClassModal
+                    onClose={() => setShowAddClass(false)}
+                    onAdd={handleAddClass}
                 />
             )}
 

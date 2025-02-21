@@ -1,0 +1,207 @@
+.add-class-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.emoji-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.emoji-selector label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+
+.emoji-option {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+}
+
+.emoji-option:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.emoji-option.selected {
+    background: rgba(129, 140, 248, 0.2);
+    border-color: rgba(129, 140, 248, 0.4);
+    box-shadow: 0 0 20px rgba(129, 140, 248, 0.2);
+}
+
+.class-name-input {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.class-name-input label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.input-with-emoji {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.input-emoji {
+    font-size: 24px;
+    opacity: 0.9;
+}
+
+.input-with-emoji input {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    flex: 1;
+    outline: none;
+}
+
+.input-with-emoji input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.create-button {
+    background: linear-gradient(135deg, rgba(129, 140, 248, 0.8), rgba(129, 140, 248, 0.6));
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 12px;
+}
+
+.create-button:not(.disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(129, 140, 248, 0.3);
+}
+
+.create-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+:root.light-mode .emoji-selector label,
+:root.light-mode .class-name-input label {
+    color: rgba(0, 0, 0, 0.7);
+}
+
+:root.light-mode .emoji-option {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+:root.light-mode .emoji-option:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+:root.light-mode .emoji-option.selected {
+    background: rgba(129, 140, 248, 0.15);
+    border-color: rgba(129, 140, 248, 0.3);
+}
+
+:root.light-mode .input-with-emoji {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+:root.light-mode .input-with-emoji input {
+    color: rgba(0, 0, 0, 0.9);
+}
+
+:root.light-mode .input-with-emoji input::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+.emoji-option.glowing {
+    background: rgba(129, 140, 248, 0.3);
+    border-color: rgba(129, 140, 248, 0.6);
+    box-shadow: 0 0 20px rgba(129, 140, 248, 0.4);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 20px rgba(129, 140, 248, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(129, 140, 248, 0.6);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(129, 140, 248, 0.4);
+    }
+}
+
+.custom-emoji-input {
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.custom-emoji-input:focus-within {
+    border-color: rgba(129, 140, 248, 0.4);
+    box-shadow: 0 0 20px rgba(129, 140, 248, 0.2);
+}
+
+.custom-emoji-input input {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    width: 100%;
+    outline: none;
+}
+
+.custom-emoji-input input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+:root.light-mode .custom-emoji-input {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+:root.light-mode .custom-emoji-input input {
+    color: rgba(0, 0, 0, 0.9);
+}
+
+:root.light-mode .custom-emoji-input input::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+:root.light-mode .emoji-option.glowing {
+    background: rgba(129, 140, 248, 0.2);
+    border-color: rgba(129, 140, 248, 0.4);
+} 
