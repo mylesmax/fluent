@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fluent/backend/db"
 	"fmt"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -22,9 +23,46 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
+	//startup db
+	_, err := db.InitDB()
+	if err != nil {
+		runtime.LogError(ctx, "Failed to init db: "+err.Error())
+	}
+
 	// Set window transparency
 	runtime.WindowSetBackgroundColour(ctx, 0, 0, 0, 0)
 	runtime.WindowSetDarkTheme(ctx)
+}
+
+func (a *App) GetProfiles() []db.Profile {
+	profiles, err := db.GetProfiles()
+	if err != nil {
+		runtime.LogError(a.ctx, "faild to get profs: "+err.Error())
+		return []db.Profile{}
+	}
+	profiles = append(profiles, db.Profile{
+		Name:         "Add New",
+		Emoji:        "➕",
+		GlowColor:    "rgba(52, 211, 153, 0.5)",
+		CurrentDrops: 0,
+	})
+	return profiles
+}
+
+func (a *App) AddProfile(profile db.Profile) error {
+	return db.AddProfile(profile)
+}
+
+func (a *App) UpdateProfileName(oldName, newName string) error {
+	return db.UpdateProfileName(oldName, newName)
+}
+
+func (a *App) DeleteProfile(name string) error {
+	return db.DeleteProfile(name)
+}
+
+func (a *App) UpdateDrops(name string, drops int) error {
+	return db.UpdateDrops(name, drops)
 }
 
 // Greet returns a greeting for the given name

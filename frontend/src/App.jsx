@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import './App.css';
-import { Greet } from "../wailsjs/go/main/App";
+import { GetProfiles, AddProfile, UpdateProfileName, DeleteProfile } from "../wailsjs/go/main/App";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import Cup from './components/Cup';
 import Profile from './components/Profile';
@@ -16,17 +16,11 @@ function App() {
     const [showMainContent, setShowMainContent] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [showAddClass, setShowAddClass] = useState(false);
-    const [profiles, setProfiles] = useState([
-        { name: 'BIO123', emoji: '🔬', glowColor: 'rgba(129, 140, 248, 0.5)' },
-        { name: 'ESE234', emoji: '⚡️', glowColor: 'rgba(52, 211, 153, 0.5)' },
-        { name: 'BME456', emoji: '🧑‍💻', glowColor: 'rgba(251, 146, 60, 0.5)' },
-        { name: 'SCIENCE', emoji: '🧪', glowColor: 'rgba(236, 72, 153, 0.5)' },
-        { name: 'Add New', emoji: '➕', glowColor: 'rgba(52, 211, 153, 0.5)' }
-    ]);
+    const [profiles, setProfiles] = useState([]);
 
     useEffect(() => {
         document.documentElement.classList.remove('light-mode');
-        
+        loadProfiles();
         setShowMainContent(true);
         
         const timer = setTimeout(() => {
@@ -35,6 +29,21 @@ function App() {
 
         return () => clearTimeout(timer);
     }, []);
+
+    const loadProfiles = async () => {
+        try {
+            const loadedProfiles = await GetProfiles();
+            setProfiles(loadedProfiles);
+            if (selectedProfile) {
+                const updatedProfile = loadedProfiles.find(p => p.classUUID === selectedProfile.classUUID);
+                if (updatedProfile) {
+                    setSelectedProfile(updatedProfile);
+                }
+            }
+        } catch (err) {
+            console.error('fail to load profiles:', err);
+        }
+    };
 
     useEffect(() => {
         if (isTransitioning) {
@@ -60,31 +69,38 @@ function App() {
         setSelectedProfile(null);
     };
 
-    const handleUpdateProfileName = (oldName, newName) => {
-        setProfiles(prevProfiles => 
-            prevProfiles.map(profile => 
-                profile.name === oldName 
-                    ? { ...profile, name: newName }
-                    : profile
-            )
-        );
-        setSelectedProfile(prev => ({ ...prev, name: newName }));
+    const handleUpdateProfileName = async (oldName, newName) => {
+        try {
+            await UpdateProfileName(oldName, newName);
+            await loadProfiles();
+        } catch (err) {
+            console.error('faild to update profile name:', err);
+        }
     };
 
-    const handleDeleteProfile = (profileName) => {
-        setProfiles(prevProfiles => 
-            prevProfiles.filter(profile => 
-                profile.name === 'Add New' || profile.name !== profileName
-            )
-        );
+    const handleDeleteProfile = async (profileName) => {
+        try {
+            await DeleteProfile(profileName);
+            await loadProfiles();
+        } catch (err) {
+            console.error('fail to delete profile:', err);
+        }
     };
 
-    const handleAddClass = (newClass) => {
-        setProfiles(prevProfiles => [
-            ...prevProfiles.slice(0, -1),
-            newClass,
-            prevProfiles[prevProfiles.length - 1]
-        ]);
+    const handleAddClass = async (newClass) => {
+        try {
+            await AddProfile({
+                name: newClass.name,
+                emoji: newClass.emoji,
+                glowColor: newClass.glowColor,
+                currentDrops: 0,
+                isAddNew: false
+            });
+            await loadProfiles();
+            setShowAddClass(false);
+        } catch (err) {
+            console.error('fail to add profile:', err);
+        }
     };
 
     return (
@@ -96,10 +112,10 @@ function App() {
                     <div className={`profile-list ${selectedProfile ? 'has-selected' : ''}`}>
                         {profiles.map((profile) => (
                             <Profile
-                                key={profile.name}
+                                key={profile.classUUID || profile.name}
                                 name={profile.name}
                                 emoji={profile.emoji}
-                                isSelected={selectedProfile?.name === profile.name}
+                                isSelected={selectedProfile?.classUUID === profile.classUUID}
                                 isAddNew={profile.name === 'Add New'}
                                 onClick={() => handleProfileClick(profile)}
                                 glowColor={profile.glowColor}

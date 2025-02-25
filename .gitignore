@@ -35,3 +35,7 @@ frontend/dist/
 # Project files
 ref/
 *.pdf
+
+# db
+.fluent/
+backend/dbstructure.md

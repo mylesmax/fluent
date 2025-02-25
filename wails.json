@@ -11,6 +11,7 @@
     "email": "maxmiller@wustl.edu"
   },
   "info": {
+    "companyName": "Fluent",
     "productName": "Fluent",
     "productVersion": "1.0.0",
     "copyright": "© 2025 mylesmax",
@@ -20,5 +21,13 @@
   "icon": {
     "path": "frontend/src/assets/images/flntribbon.png",
     "sizes": [16, 32, 48, 64, 128, 256]
+  },
+  "mac": {
+    "entitlements": "build/darwin/entitlements.plist",
+    "entitlementsInherit": "build/darwin/entitlements.plist",
+    "provisioningProfile": "",
+    "notarize": false,
+    "universal": false,
+    "windowsAndLinuxOnly": false
   }
 }
