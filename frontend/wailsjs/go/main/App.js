@@ -22,6 +22,10 @@ export function UpdateDrops(arg1, arg2) {
   return window['go']['main']['App']['UpdateDrops'](arg1, arg2);
 }
 
+export function UpdateProfileGlowColor(arg1, arg2) {
+  return window['go']['main']['App']['UpdateProfileGlowColor'](arg1, arg2);
+}
+
 export function UpdateProfileName(arg1, arg2) {
   return window['go']['main']['App']['UpdateProfileName'](arg1, arg2);
 }

@@ -1,25 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import './Cup.css';
+import './SimpleCup.css';
 
-const Cup = () => {
+const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
     const canvasRef = useRef(null);
     const [isGolden, setIsGolden] = useState(false);
-    const [currentDrops, setCurrentDrops] = useState(30);
-    const [maxDrops, setMaxDrops] = useState(50);
     const [ripples, setRipples] = useState([]);
-    const [goldParticles, setGoldParticles] = useState([]);
     const [isShaking, setIsShaking] = useState(false);
-    const [isHovering, setIsHovering] = useState(false);
     const animationFrameRef = useRef();
     const shakeStartTimeRef = useRef(0);
-    const cupInfoRef = useRef(null);
-
+    
     useEffect(() => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
-        const cupWidth = 120;
-        const cupHeight = 140;
+        const cupWidth = 100;
+        const cupHeight = 120;
 
         canvas.width = cupWidth * dpr;
         canvas.height = cupHeight * dpr;
@@ -31,9 +26,9 @@ const Cup = () => {
             const time = Date.now() / 1000;
             const gradient = ctx.createLinearGradient(x, y + height, x + width, y);
             const colors = [
-                'rgba(129, 188, 239, 0.8)',
-                'rgba(85, 155, 232, 0.7)',
-                'rgba(50, 85, 122, 0.6)'
+                getComputedStyle(document.documentElement).getPropertyValue('--gradient-color-1').trim(),
+                getComputedStyle(document.documentElement).getPropertyValue('--gradient-color-2').trim(),
+                getComputedStyle(document.documentElement).getPropertyValue('--gradient-color-3').trim()
             ];
 
             for (let i = 0; i < 15; i++) {
@@ -52,7 +47,6 @@ const Cup = () => {
                 ctx.fillRect(x, y, width, height);
             }
 
-            //wavy wavy wavuy
             ctx.beginPath();
             ctx.moveTo(x, y + height);
             ctx.lineTo(x, y);
@@ -105,19 +99,6 @@ const Cup = () => {
                     const momentumFactor = Math.pow(1 - shakeProgress, 1.5);
                     const dampedOffset = (sloshOffset + initialSplash) * horizontalFactor * momentumFactor;
                     totalOffset += dampedOffset;
-                    
-                    const ripplePhase = elapsed * (0.012 - shakeProgress * 0.006);
-                    const rippleCenter = (Math.sin(ripplePhase) * 0.5 + 0.5) * width;
-                    const distanceToRipple = Math.abs(i - rippleCenter);
-                    const normalizedDistance = distanceToRipple / (width * 0.3);
-                    const rippleIntensity = Math.max(0, 1 - Math.pow(normalizedDistance, 1.5));
-                    
-                    const shakeRipple = Math.sin(normalizedDistance * Math.PI * 2 - elapsed * 0.006)
-                        * rippleIntensity 
-                        * smoothDecay 
-                        * 1.5;
-                    
-                    totalOffset += shakeRipple * momentumFactor;
                 }
                 
                 if (ripples.length > 0) {
@@ -156,7 +137,6 @@ const Cup = () => {
             ctx.fillStyle = waveGradient;
             ctx.fill();
 
-            // glowy glowy glowy
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
             const glowGradient = ctx.createRadialGradient(
@@ -198,52 +178,33 @@ const Cup = () => {
                 ctx.translate(-cupWidth / 2, -cupHeight / 2);
             }
 
-            const waterHeight = 80 * (currentDrops / maxDrops);
-            drawShimmeringWater(ctx, 22, 100 - waterHeight, 76, waterHeight);
+            const waterHeight = 70 * (currentDrops / maxDrops);
+            drawShimmeringWater(ctx, 12, 90 - waterHeight, 76, waterHeight);
 
-            //ripples
             ctx.beginPath();
-            ctx.moveTo(22, 100 - waterHeight);
-            for (let x = 22; x <= 98; x++) {
-                let y = 100 - waterHeight;
-                for (const ripple of ripples) {
-                    const dx = x - ripple.x;
-                    const dy = y - ripple.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-                    y += Math.sin(distance / ripple.wavelength - ripple.phase) * ripple.amplitude;
-                }
-                ctx.lineTo(x, y);
-            }
-            ctx.lineTo(98, 100 - waterHeight);
-            ctx.closePath();
-            ctx.fill();
+            ctx.moveTo(10, 10);
+            ctx.lineTo(10, 70);
+            ctx.quadraticCurveTo(10, 90, 30, 90);
+            ctx.lineTo(70, 90);
+            ctx.quadraticCurveTo(90, 90, 90, 70);
+            ctx.lineTo(90, 10);
 
-            //cup outline, TODO: fix this
-            ctx.beginPath();
-            ctx.moveTo(20, 17);
-            ctx.lineTo(20, 80);
-            ctx.quadraticCurveTo(20, 100, 40, 100);
-            ctx.lineTo(80, 100);
-            ctx.quadraticCurveTo(100, 100, 100, 80);
-            ctx.lineTo(100, 17);
-
-            ctx.lineWidth = 9;
+            ctx.lineWidth = 8;
 
             if (isGolden) {
-                const goldGradient = ctx.createLinearGradient(10, 20, 100, 80);
+                const goldGradient = ctx.createLinearGradient(10, 10, 90, 70);
                 goldGradient.addColorStop(0, '#FFD700');
                 goldGradient.addColorStop(0.5, '#FFF3A0');
                 goldGradient.addColorStop(1, '#FFD700');
                 ctx.strokeStyle = goldGradient;
                 
-                //GOLD GLOW!!!!!
                 ctx.save();
                 ctx.shadowColor = '#FFD700';
                 ctx.shadowBlur = 5;
                 ctx.stroke();
                 ctx.restore();
             } else {
-                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cup-outline-color').trim();
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--cup-outline-color').trim() || '#ffffff';
                 ctx.stroke();
             }
 
@@ -270,17 +231,17 @@ const Cup = () => {
                 cancelAnimationFrame(animationFrameRef.current);
             }
         };
-    }, [currentDrops, maxDrops, isGolden, ripples, goldParticles, isShaking]);
+    }, [currentDrops, maxDrops, isGolden, ripples, isShaking]);
 
     const shake = () => {
         if (!isShaking) {
             setIsShaking(true);
             shakeStartTimeRef.current = Date.now();
-
+            
             const addShakeRipples = () => {
                 if (Math.random() < 0.3) {
-                    const x = 22 + Math.random() * 76;
-                    const y = 100 - 80 * (currentDrops / maxDrops);
+                    const x = 12 + Math.random() * 76;
+                    const y = 90 - 70 * (currentDrops / maxDrops);
                     setRipples(prevRipples => [
                         ...prevRipples,
                         {
@@ -300,6 +261,10 @@ const Cup = () => {
             setTimeout(() => {
                 clearInterval(rippleInterval);
             }, 700);
+            
+            if (onClick) {
+                onClick();
+            }
         }
     };
 
@@ -309,7 +274,7 @@ const Cup = () => {
                 prevRipples
                     .map(ripple => ({
                         ...ripple,
-                        phase: ripple.phase + ripple.speed,
+                        phase: ripple.phase + (ripple.speed || 0.12),
                         amplitude: ripple.amplitude - (ripple.amplitude * 0.02)
                     }))
                     .filter(ripple => ripple.amplitude > 0.1)
@@ -320,16 +285,10 @@ const Cup = () => {
         return () => clearInterval(rippleInterval);
     }, []);
 
-    useEffect(() => {
-        if (cupInfoRef.current) {
-            cupInfoRef.current.textContent = isHovering ? `${currentDrops}/${maxDrops}` : '';
-            cupInfoRef.current.className = isHovering ? (isGolden ? 'visible golden' : 'visible') : '';
-        }
-    }, [isHovering, currentDrops, maxDrops, isGolden]);
-
     const lerpColor = (color1, color2, amount) => {
         const parseColor = (color) => {
-            const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)/);
+            const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([.\d]+))?\)/);
+            if (!match) return { r: 0, g: 0, b: 0, a: 1 };
             return {
                 r: parseInt(match[1]),
                 g: parseInt(match[2]),
@@ -353,16 +312,13 @@ const Cup = () => {
     };
 
     return (
-        <div 
-            id="cupContainer" 
-            onClick={shake}
-            onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
-        >
-            <canvas ref={canvasRef} id="cupCanvas"></canvas>
-            <div id="cupInfo" ref={cupInfoRef} className={isGolden ? 'golden' : ''}></div>
+        <div className="simple-cup-wrapper" onClick={shake}>
+            <canvas ref={canvasRef} className="simple-cup-canvas"></canvas>
+            <div id="cupInfo" className={`${isGolden ? 'golden' : ''} visible`}>
+                {currentDrops}/{maxDrops}
+            </div>
         </div>
     );
 };
 
-export default Cup; 
+export default SimpleCup; 

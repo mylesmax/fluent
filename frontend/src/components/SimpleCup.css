@@ -12,22 +12,39 @@
     --gradient-color-3: rgba(121, 96, 76, 0.7);
 }
 
+.simple-cup-wrapper {
+    position: relative;
+    width: 100px;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.simple-cup-wrapper:active {
+    transform: scale(0.99);
+}
+
+.simple-cup-canvas {
+    width: 100px;
+    height: 120px;
+    display: block;
+}
 
 #cupInfo {
     position: absolute;
-    top: -20px;
+    top: -15px;
     left: 50%;
     transform: translateX(-50%);
-    width: 74px;
+    width: 60px;
     text-align: center;
     color: rgba(106, 198, 241, 0.87);
-    font-size: 17px;
-    font-family: 'Nunito', 'Segoe UI', sans-serif;
-    font-weight: 800;
-    letter-spacing: 0.5px;
+    font-size: 14px;
+    font-style: italic;
     opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease, text-shadow 0.3s ease;
+    transition: opacity 0.3s ease, text-shadow 0.3s ease;
     pointer-events: none;
     text-shadow:
         0 0 2px rgba(106, 198, 241, 0.2),
@@ -37,7 +54,6 @@
 
 #cupInfo.visible {
     opacity: 1;
-    visibility: visible;
 }
 
 #cupInfo.golden {
@@ -49,9 +65,9 @@
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateY(15px) translateX(0); }
-    25% { transform: translateY(15px) translateX(-5px); }
-    75% { transform: translateY(15px) translateX(5px); }
+    0%, 100% { transform: translateY(0) translateX(0); }
+    25% { transform: translateY(0) translateX(-5px); }
+    75% { transform: translateY(0) translateX(5px); }
 }
 
 .shaking {

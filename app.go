@@ -65,6 +65,10 @@ func (a *App) UpdateDrops(name string, drops int) error {
 	return db.UpdateDrops(name, drops)
 }
 
+func (a *App) UpdateProfileGlowColor(name string, newGlowColor string) error {
+	return db.UpdateProfileGlowColor(name, newGlowColor)
+}
+
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)

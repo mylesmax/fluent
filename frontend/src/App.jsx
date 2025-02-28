@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import './App.css';
-import { GetProfiles, AddProfile, UpdateProfileName, DeleteProfile } from "../wailsjs/go/main/App";
+import { GetProfiles, AddProfile, UpdateProfileName, DeleteProfile, UpdateProfileGlowColor } from "../wailsjs/go/main/App";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import Cup from './components/Cup';
 import Profile from './components/Profile';
@@ -103,6 +103,15 @@ function App() {
         }
     };
 
+    const handleUpdateGlowColor = async (profileName, newColor) => {
+        try {
+            await UpdateProfileGlowColor(profileName, newColor);
+            await loadProfiles();
+        } catch (err) {
+            console.error('failed to update glow color:', err);
+        }
+    };
+
     return (
         <div className="v0_3">
             <div className={`main-content ${showMainContent ? 'visible' : ''}`}>
@@ -119,6 +128,7 @@ function App() {
                                 isAddNew={profile.name === 'Add New'}
                                 onClick={() => handleProfileClick(profile)}
                                 glowColor={profile.glowColor}
+                                onGlowColorChange={(newColor) => handleUpdateGlowColor(profile.name, newColor)}
                             />
                         ))}
                     </div>

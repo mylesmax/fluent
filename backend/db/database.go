@@ -447,3 +447,12 @@ func RestoreProfile(classUUID string) error {
 	`, classUUID)
 	return err
 }
+
+func UpdateProfileGlowColor(name string, newGlowColor string) error {
+	_, err := db.Exec(`
+		UPDATE profiles 
+		SET glow_color = ?
+		WHERE name = ?
+	`, newGlowColor, name)
+	return err
+}

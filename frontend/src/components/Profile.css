@@ -172,7 +172,7 @@
     position: absolute;
     top: 20px;
     left: 20px;
-    max-width: calc(100% - 40px);
+    max-width: calc(100% - 60px);
     word-wrap: break-word;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
@@ -396,5 +396,202 @@
     text-shadow: 
         0 0 35px var(--glow-color),
         0 0 65px var(--glow-color-alpha);
+}
+
+/* Color Switcher Styles */
+.color-switcher-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+}
+
+.color-switcher-button {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    opacity: 0.85;
+}
+
+.color-switcher-button:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.9);
+    opacity: 1;
+}
+
+.color-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.color-picker-dropdown {
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeInScale 0.2s ease-out;
+    z-index: 9999;
+    width: 160px;
+}
+
+.color-picker-dropdown.fixed {
+    position: fixed;
+}
+
+.color-option {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.color-option:hover {
+    transform: scale(1.2);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Light mode adjustments for color switcher */
+:root.light-mode .color-picker-dropdown {
+    background: rgba(240, 240, 240, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+:root.light-mode .color-switcher-button {
+    border-color: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+:root.light-mode .color-switcher-button:hover {
+    border-color: rgba(0, 0, 0, 0.6);
+}
+
+:root.light-mode .color-option {
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+:root.light-mode .color-option:hover {
+    border-color: rgba(0, 0, 0, 0.5);
+}
+
+.profile:hover .color-switcher-button {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* Additional Color Wheel Styles */
+.color-option-plus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(80, 80, 80, 0.7) !important;
+}
+
+.color-wheel-container {
+    background: rgba(30, 30, 30, 0.9);
+    backdrop-filter: blur(16px);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeInScale 0.2s ease-out;
+    z-index: 9999;
+    width: 160px;
+}
+
+.color-wheel {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.color-wheel::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-wheel::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.apply-color-button {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.apply-color-button:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+}
+
+/* Light mode adjustments for color wheel */
+:root.light-mode .color-wheel-container {
+    background: rgba(240, 240, 240, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+:root.light-mode .apply-color-button {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.8);
+}
+
+:root.light-mode .apply-color-button:hover {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+:root.light-mode .color-option-plus {
+    color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(200, 200, 200, 0.7) !important;
 }
 

@@ -3,11 +3,13 @@ import './ProfileMenu.css';
 import mindsetIcon from '../assets/images/mindset.png';
 import readingBookIcon from '../assets/images/reading-book.png';
 import dropperIcon from '../assets/images/dropper.png';
+import LearnMode from './LearnMode';
 
 const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(profile.name);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showLearnMode, setShowLearnMode] = useState(false);
 
     const saveChanges = () => {
         if (editedName.trim() !== '' && editedName.trim() !== profile.name) {
@@ -49,6 +51,20 @@ const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
         onDelete(profile.name);
         onClose();
     };
+    
+    const handleLearnClick = () => {
+        setShowLearnMode(true);
+        document.body.style.overflow = 'hidden';
+    };
+    
+    const handleLearnClose = () => {
+        setShowLearnMode(false);
+        document.body.style.overflow = '';
+    };
+
+    if (showLearnMode) {
+        return <LearnMode profile={profile} onClose={handleLearnClose} />;
+    }
 
     return (
         <div className="profile-menu-overlay" onClick={handleOverlayClick}>
@@ -83,7 +99,7 @@ const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
                 </div>
                 <div className="profile-menu-buttons">
                     <div className="menu-button-container">
-                        <button className="menu-button learn">
+                        <button className="menu-button learn" onClick={handleLearnClick}>
                             <img src={mindsetIcon} alt="Learn" className="button-icon" />
                         </button>
                         <span className="menu-button-label learn">LEARN</span>

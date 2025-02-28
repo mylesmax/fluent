@@ -12,4 +12,6 @@ export function Greet(arg1:string):Promise<string>;
 
 export function UpdateDrops(arg1:string,arg2:number):Promise<void>;
 
+export function UpdateProfileGlowColor(arg1:string,arg2:string):Promise<void>;
+
 export function UpdateProfileName(arg1:string,arg2:string):Promise<void>;
