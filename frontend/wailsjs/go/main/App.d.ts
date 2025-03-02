@@ -4,14 +4,28 @@ import {db} from '../models';
 
 export function AddProfile(arg1:db.Profile):Promise<void>;
 
+export function CreateLearnSession(arg1:string,arg2:string,arg3:string):Promise<string>;
+
 export function DeleteProfile(arg1:string):Promise<void>;
+
+export function EndSession(arg1:string,arg2:string):Promise<void>;
+
+export function GetClassSessions(arg1:string):Promise<Array<db.SessionData>>;
 
 export function GetProfiles():Promise<Array<db.Profile>>;
 
 export function Greet(arg1:string):Promise<string>;
+
+export function RecordAIChatHistory(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:number):Promise<void>;
+
+export function RecordAIParserHistory(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:number):Promise<void>;
+
+export function RecordAIUploadHistory(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:number):Promise<void>;
 
 export function UpdateDrops(arg1:string,arg2:number):Promise<void>;
 
 export function UpdateProfileGlowColor(arg1:string,arg2:string):Promise<void>;
 
 export function UpdateProfileName(arg1:string,arg2:string):Promise<void>;
+
+export function UpdateSessionChatHistory(arg1:string,arg2:string,arg3:string):Promise<void>;

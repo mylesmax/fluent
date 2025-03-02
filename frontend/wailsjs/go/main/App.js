@@ -6,8 +6,20 @@ export function AddProfile(arg1) {
   return window['go']['main']['App']['AddProfile'](arg1);
 }
 
+export function CreateLearnSession(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CreateLearnSession'](arg1, arg2, arg3);
+}
+
 export function DeleteProfile(arg1) {
   return window['go']['main']['App']['DeleteProfile'](arg1);
+}
+
+export function EndSession(arg1, arg2) {
+  return window['go']['main']['App']['EndSession'](arg1, arg2);
+}
+
+export function GetClassSessions(arg1) {
+  return window['go']['main']['App']['GetClassSessions'](arg1);
 }
 
 export function GetProfiles() {
@@ -16,6 +28,18 @@ export function GetProfiles() {
 
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
+}
+
+export function RecordAIChatHistory(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['RecordAIChatHistory'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function RecordAIParserHistory(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['RecordAIParserHistory'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function RecordAIUploadHistory(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['RecordAIUploadHistory'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 export function UpdateDrops(arg1, arg2) {
@@ -28,4 +52,8 @@ export function UpdateProfileGlowColor(arg1, arg2) {
 
 export function UpdateProfileName(arg1, arg2) {
   return window['go']['main']['App']['UpdateProfileName'](arg1, arg2);
+}
+
+export function UpdateSessionChatHistory(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateSessionChatHistory'](arg1, arg2, arg3);
 }

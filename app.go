@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fluent/backend/db"
 	"fmt"
 
@@ -67,6 +68,78 @@ func (a *App) UpdateDrops(name string, drops int) error {
 
 func (a *App) UpdateProfileGlowColor(name string, newGlowColor string) error {
 	return db.UpdateProfileGlowColor(name, newGlowColor)
+}
+
+// CreateLearnSession creates a new learn session in the database
+func (a *App) CreateLearnSession(classUUID string, uploadPrompt string, chatHistoryJSON string) (string, error) {
+	chatHistory := json.RawMessage(chatHistoryJSON)
+	sessionID, err := db.CreateLearnSession(classUUID, uploadPrompt, chatHistory)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to create learn session: "+err.Error())
+		return "", err
+	}
+	return sessionID, nil
+}
+
+// RecordAIUploadHistory records an AI upload interaction in history
+func (a *App) RecordAIUploadHistory(classUUID string, sessionID string, prompt string, response string, tokens int, cost float64) error {
+	err := db.RecordAIUploadHistory(classUUID, sessionID, prompt, response, tokens, cost)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to record AI upload history: "+err.Error())
+		return err
+	}
+	return nil
+}
+
+// RecordAIChatHistory records an AI chat interaction in history
+func (a *App) RecordAIChatHistory(classUUID string, sessionID string, prompt string, response string, tokens int, cost float64) error {
+	err := db.RecordAIChatHistory(classUUID, sessionID, prompt, response, tokens, cost)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to record AI chat history: "+err.Error())
+		return err
+	}
+	return nil
+}
+
+// RecordAIParserHistory records an AI parser interaction in history
+func (a *App) RecordAIParserHistory(classUUID string, sessionID string, prompt string, response string, tokens int, cost float64) error {
+	err := db.RecordAIParserHistory(classUUID, sessionID, prompt, response, tokens, cost)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to record AI parser history: "+err.Error())
+		return err
+	}
+	return nil
+}
+
+// UpdateSessionChatHistory updates the chat history for a session
+func (a *App) UpdateSessionChatHistory(classUUID string, sessionID string, chatHistoryJSON string) error {
+	chatHistory := json.RawMessage(chatHistoryJSON)
+	err := db.UpdateSessionChatHistory(classUUID, sessionID, chatHistory)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to update session chat history: "+err.Error())
+		return err
+	}
+	return nil
+}
+
+// EndSession marks a session as ended
+func (a *App) EndSession(classUUID string, sessionID string) error {
+	err := db.EndSession(classUUID, sessionID)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to end session: "+err.Error())
+		return err
+	}
+	return nil
+}
+
+// GetClassSessions retrieves all sessions for a class
+func (a *App) GetClassSessions(classUUID string) ([]db.SessionData, error) {
+	sessions, err := db.GetClassSessions(classUUID)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to get class sessions: "+err.Error())
+		return nil, err
+	}
+	return sessions, nil
 }
 
 // Greet returns a greeting for the given name

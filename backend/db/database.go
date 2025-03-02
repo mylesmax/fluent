@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
@@ -33,6 +34,27 @@ type Profile struct {
 	NameHistory  []string `json:"nameHistory"`
 }
 
+//for logging prices + ai interactions
+type AIHistoryEntry struct {
+	ID        int       `json:"id"`
+	ClassUUID string    `json:"classUUID"`
+	SessionID string    `json:"sessionID"`
+	Prompt    string    `json:"prompt"`
+	Response  string    `json:"response"`
+	Tokens    int       `json:"tokens"`
+	Cost      float64   `json:"cost"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type SessionData struct {
+	ID             string          `json:"id"`
+	ClassUUID      string          `json:"classUUID"`
+	UploadPrompt   string          `json:"uploadPrompt"`
+	ChatHistory    json.RawMessage `json:"chatHistory"`
+	StartTimestamp time.Time       `json:"startTimestamp"`
+	EndTimestamp   *time.Time      `json:"endTimestamp"`
+}
+
 // sep into user data/styling, class dbs for droplets, trash can
 func ensureDataDirs() error {
 	homeDir, err := os.UserHomeDir()
@@ -45,6 +67,7 @@ func ensureDataDirs() error {
 		filepath.Join(homeDir, ".fluent/user"),
 		filepath.Join(homeDir, ".fluent/class"),
 		filepath.Join(homeDir, ".fluent/trash"),
+		filepath.Join(homeDir, ".fluent/aiHistory"), // New directory for AI history
 	}
 
 	for _, dir := range dirs {
@@ -281,8 +304,50 @@ func InitDB() (*sql.DB, error) {
 
 			classDB.Close()
 		}
+
+		initAIHistoryDatabases()
 	})
 	return db, err
+}
+
+func initAIHistoryDatabases() {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Printf("Failed to get home directory: %v", err)
+		return
+	}
+
+	aiHistoryDBs := []string{
+		filepath.Join(homeDir, ".fluent/aiHistory/uploads.db"),
+		filepath.Join(homeDir, ".fluent/aiHistory/chats.db"),
+		filepath.Join(homeDir, ".fluent/aiHistory/parser.db"),
+	}
+
+	for _, dbPath := range aiHistoryDBs {
+		aiHistoryDB, err := sql.Open("sqlite3", dbPath)
+		if err != nil {
+			log.Printf("Failed to open AI history database %s: %v", dbPath, err)
+			continue
+		}
+
+		_, err = aiHistoryDB.Exec(`
+			CREATE TABLE IF NOT EXISTS ai_history (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				class_uuid TEXT NOT NULL,
+				session_id TEXT NOT NULL,
+				prompt TEXT NOT NULL,
+				response TEXT,
+				tokens INTEGER DEFAULT 0,
+				cost REAL DEFAULT 0.0,
+				timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);
+		`)
+		if err != nil {
+			log.Printf("Failed to create AI history table in %s: %v", dbPath, err)
+		}
+
+		aiHistoryDB.Close()
+	}
 }
 
 func GetProfiles() ([]Profile, error) {
@@ -454,5 +519,229 @@ func UpdateProfileGlowColor(name string, newGlowColor string) error {
 		SET glow_color = ?
 		WHERE name = ?
 	`, newGlowColor, name)
+	return err
+}
+
+func CreateLearnSession(classUUID, uploadPrompt string, chatHistory json.RawMessage) (string, error) {
+	sessionID := uuid.New().String()
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	_, err = classDB.Exec(`
+		CREATE TABLE IF NOT EXISTS sessions (
+			id TEXT PRIMARY KEY,
+			upload_prompt TEXT NOT NULL,
+			chat_history TEXT NOT NULL,
+			start_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			end_timestamp TIMESTAMP
+		);
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed to create sessions table: %v", err)
+	}
+
+	_, err = classDB.Exec(`
+		INSERT INTO sessions (id, upload_prompt, chat_history)
+		VALUES (?, ?, ?);
+	`, sessionID, uploadPrompt, chatHistory)
+	if err != nil {
+		return "", fmt.Errorf("failed to insert session: %v", err)
+	}
+
+	err = RecordAIUploadHistory(classUUID, sessionID, uploadPrompt, "", 0, 0.0)
+	if err != nil {
+		log.Printf("Warning: Failed to record upload AI history: %v", err)
+	}
+
+	return sessionID, nil
+}
+
+func RecordAIUploadHistory(classUUID, sessionID, prompt, response string, tokens int, cost float64) error {
+	return recordAIHistory("uploads.db", classUUID, sessionID, prompt, response, tokens, cost)
+}
+
+func RecordAIChatHistory(classUUID, sessionID, prompt, response string, tokens int, cost float64) error {
+	return recordAIHistory("chats.db", classUUID, sessionID, prompt, response, tokens, cost)
+}
+
+func RecordAIParserHistory(classUUID, sessionID, prompt, response string, tokens int, cost float64) error {
+	return recordAIHistory("parser.db", classUUID, sessionID, prompt, response, tokens, cost)
+}
+
+func recordAIHistory(dbName, classUUID, sessionID, prompt, response string, tokens int, cost float64) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	dbPath := filepath.Join(homeDir, ".fluent/aiHistory", dbName)
+	aiHistoryDB, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to open AI history database: %v", err)
+	}
+	defer aiHistoryDB.Close()
+
+	_, err = aiHistoryDB.Exec(`
+		INSERT INTO ai_history (class_uuid, session_id, prompt, response, tokens, cost)
+		VALUES (?, ?, ?, ?, ?, ?);
+	`, classUUID, sessionID, prompt, response, tokens, cost)
+
+	return err
+}
+
+func GetSessionData(classUUID, sessionID string) (*SessionData, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	var session SessionData
+	var startTimestamp string
+	var endTimestamp sql.NullString
+	var chatHistoryStr string
+
+	err = classDB.QueryRow(`
+		SELECT id, upload_prompt, chat_history, start_timestamp, end_timestamp
+		FROM sessions
+		WHERE id = ?
+	`, sessionID).Scan(&session.ID, &session.UploadPrompt, &chatHistoryStr, &startTimestamp, &endTimestamp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve session: %v", err)
+	}
+
+	session.ClassUUID = classUUID
+	session.ChatHistory = json.RawMessage(chatHistoryStr)
+	session.StartTimestamp, _ = time.Parse(time.RFC3339, startTimestamp)
+
+	if endTimestamp.Valid {
+		endTime, _ := time.Parse(time.RFC3339, endTimestamp.String)
+		session.EndTimestamp = &endTime
+	}
+
+	return &session, nil
+}
+
+func GetClassSessions(classUUID string) ([]SessionData, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	var tableExists bool
+	err = classDB.QueryRow(`
+		SELECT COUNT(*) > 0 
+		FROM sqlite_master 
+		WHERE type='table' AND name='sessions'
+	`).Scan(&tableExists)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if sessions table exists: %v", err)
+	}
+
+	if !tableExists {
+		return []SessionData{}, nil
+	}
+
+	rows, err := classDB.Query(`
+		SELECT id, upload_prompt, chat_history, start_timestamp, end_timestamp
+		FROM sessions
+		ORDER BY start_timestamp DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query sessions: %v", err)
+	}
+	defer rows.Close()
+
+	var sessions []SessionData
+	for rows.Next() {
+		var session SessionData
+		var startTimestamp string
+		var endTimestamp sql.NullString
+		var chatHistoryStr string
+
+		err := rows.Scan(&session.ID, &session.UploadPrompt, &chatHistoryStr, &startTimestamp, &endTimestamp)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan session row: %v", err)
+		}
+
+		session.ClassUUID = classUUID
+		session.ChatHistory = json.RawMessage(chatHistoryStr)
+		session.StartTimestamp, _ = time.Parse(time.RFC3339, startTimestamp)
+
+		if endTimestamp.Valid {
+			endTime, _ := time.Parse(time.RFC3339, endTimestamp.String)
+			session.EndTimestamp = &endTime
+		}
+
+		sessions = append(sessions, session)
+	}
+
+	return sessions, nil
+}
+
+func UpdateSessionChatHistory(classUUID, sessionID string, chatHistory json.RawMessage) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	_, err = classDB.Exec(`
+		UPDATE sessions
+		SET chat_history = ?
+		WHERE id = ?
+	`, chatHistory, sessionID)
+
+	return err
+}
+
+func EndSession(classUUID, sessionID string) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	_, err = classDB.Exec(`
+		UPDATE sessions
+		SET end_timestamp = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`, sessionID)
+
 	return err
 }

@@ -6,6 +6,7 @@ import rd1Gif from '../assets/gifs/rd1.gif';
 import splashGif from '../assets/gifs/splash.gif';
 import pourLoadGif from '../assets/gifs/pour-load.gif';
 import SimpleCup from './SimpleCup';
+import { CreateLearnSession, RecordAIUploadHistory, UpdateSessionChatHistory, EndSession } from '../../wailsjs/go/main/App';
 
 const LearnMode = ({ profile, onClose }) => {
     const [currentScreen, setCurrentScreen] = useState('welcome');
@@ -13,6 +14,7 @@ const LearnMode = ({ profile, onClose }) => {
     const [conversation, setConversation] = useState([]);
     const [uploadText, setUploadText] = useState('');
     const [isAITyping, setIsAITyping] = useState(false);
+    const [sessionId, setSessionId] = useState(null);
     
     const [currentDrops, setCurrentDrops] = useState(30);
     const [maxDrops, setMaxDrops] = useState(50);
@@ -306,10 +308,50 @@ const LearnMode = ({ profile, onClose }) => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    const handleProcessText = () => {
+        if (uploadText.trim() === '') return;
+        
+        setCurrentScreen('processing');
+        
+        const emptyConversation = [];
+        const conversationJSON = JSON.stringify(emptyConversation);
+        
+        CreateLearnSession(profile.classUUID, uploadText, conversationJSON)
+            .then(newSessionId => {
+                setSessionId(newSessionId);
+                
+                                setTimeout(() => {
+                    setCurrentScreen('chat');
+                    const initialConversation = [
+                        { role: 'ai', content: `I've analyzed the content you provided about ${profile.name}. I've extracted some key concepts that we can explore together.` },
+                        { role: 'ai', content: `Let's dive into what you'd like to learn. You can ask me specific questions about ${profile.name} or ask for an overview of the main topics.` }
+                    ];
+                    
+                    setConversation(initialConversation);
+                    
+                                        UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify(initialConversation))
+                        .catch(err => console.error("Failed to update chat history:", err));
+                    
+                }, 3000);
+            })
+            .catch(err => {
+                console.error("Failed to create learn session:", err);
+                
+                                setTimeout(() => {
+                    setCurrentScreen('chat');
+                    setConversation([
+                        { role: 'ai', content: `I've analyzed the content you provided about ${profile.name}. I've extracted some key concepts that we can explore together.` },
+                        { role: 'ai', content: `Let's dive into what you'd like to learn. You can ask me specific questions about ${profile.name} or ask for an overview of the main topics.` }
+                    ]);
+                }, 3000);
+            });
+    };
+
     const handleSendMessage = () => {
         if (message.trim() === '') return;
-
-        setConversation(prev => [...prev, { role: 'user', content: message }]);
+        
+        const userMessage = { role: 'user', content: message };
+        setConversation(prev => [...prev, userMessage]);
         
         const addDropsMatch = message.match(/^add drops (\d+)$/i);
         if (addDropsMatch) {
@@ -323,13 +365,17 @@ const LearnMode = ({ profile, onClose }) => {
                 const finalDropCount = currentDrops + actualDropsAdded;
                 
                 if (actualDropsAdded <= 0) {
-                    setConversation(prev => [
-                        ...prev,
-                        { 
-                            role: 'ai', 
-                            content: `Your cup is already full! (${currentDrops}/${maxDrops})` 
-                        }
-                    ]);
+                    const aiResponse = { 
+                        role: 'ai', 
+                        content: `Your cup is already full! (${currentDrops}/${maxDrops})` 
+                    };
+                    const updatedConversation = [...conversation, userMessage, aiResponse];
+                    setConversation(updatedConversation);
+                    
+                    if (sessionId) {
+                        UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
+                            .catch(err => console.error("Failed to update chat history:", err));
+                    }
                     return;
                 }
                 
@@ -344,13 +390,17 @@ const LearnMode = ({ profile, onClose }) => {
                         responseContent += `Current count: ${finalDropCount}/${maxDrops}`;
                     }
                     
-                    setConversation(prev => [
-                        ...prev,
-                        { 
-                            role: 'ai', 
-                            content: responseContent
-                        }
-                    ]);
+                    const aiResponse = { 
+                        role: 'ai', 
+                        content: responseContent
+                    };
+                    const updatedConversation = [...conversation, userMessage, aiResponse];
+                    setConversation(updatedConversation);
+                    
+                    if (sessionId) {
+                        UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
+                            .catch(err => console.error("Failed to update chat history:", err));
+                    }
                 }, 200);
                 
                 return;
@@ -358,18 +408,28 @@ const LearnMode = ({ profile, onClose }) => {
         }
         
         setMessage('');
-        
         setIsAITyping(true);
         
-        setTimeout(() => {
+        if (sessionId) {
+            const updatedConversation = [...conversation, userMessage];
+            UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
+                .catch(err => console.error("Failed to update chat history:", err));
+                
+                                            }
+        
+                setTimeout(() => {
             setIsAITyping(false);
-            setConversation(prev => [
-                ...prev, 
-                { 
-                    role: 'ai', 
-                    content: `I'm analyzing the content about ${profile.name}. This is a key concept we can explore: [Concept Example]. Would you like me to explain more about this concept or explore something else?` 
-                }
-            ]);
+            const aiResponse = { 
+                role: 'ai', 
+                content: `I'm analyzing the content about ${profile.name}. This is a key concept we can explore: [Concept Example]. Would you like me to explain more about this concept or explore something else?`
+            };
+            const updatedConversation = [...conversation, userMessage, aiResponse];
+            setConversation(updatedConversation);
+            
+                        if (sessionId) {
+                UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
+                    .catch(err => console.error("Failed to update chat history:", err));
+            }
         }, 1500);
     };
 
@@ -381,20 +441,6 @@ const LearnMode = ({ profile, onClose }) => {
                 handleSendMessage();
             }
         }
-    };
-
-    const handleProcessText = () => {
-        if (uploadText.trim() === '') return;
-        
-        setCurrentScreen('processing');
-        
-        setTimeout(() => {
-            setCurrentScreen('chat');
-            setConversation([
-                { role: 'ai', content: `I've analyzed the content you provided about ${profile.name}. I've extracted some key concepts that we can explore together.` },
-                { role: 'ai', content: `Let's dive into what you'd like to learn. You can ask me specific questions about ${profile.name} or ask for an overview of the main topics.` }
-            ]);
-        }, 3000);
     };
 
     const renderScreen = () => {
@@ -550,6 +596,15 @@ const LearnMode = ({ profile, onClose }) => {
                 return null;
         }
     };
+
+        useEffect(() => {
+        return () => {
+            if (sessionId) {
+                EndSession(profile.classUUID, sessionId)
+                    .catch(err => console.error("Failed to end session:", err));
+            }
+        };
+    }, [sessionId, profile.classUUID]);
 
     return (
         <div className={`learn-mode-window ${currentScreen === 'welcome' ? 'fullscreen' : ''}`}>
