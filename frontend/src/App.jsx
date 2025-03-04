@@ -19,7 +19,8 @@ function App() {
     const [profiles, setProfiles] = useState([]);
 
     useEffect(() => {
-        document.documentElement.classList.remove('light-mode');
+        document.documentElement.classList.add('dark-mode');
+        
         loadProfiles();
         setShowMainContent(true);
         

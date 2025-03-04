@@ -50,6 +50,16 @@ func (a *App) GetProfiles() []db.Profile {
 	return profiles
 }
 
+//get data for the database explorer
+func (a *App) GetDatabaseExplorerData(classUUID string) (*db.DatabaseExplorerData, error) {
+	data, err := db.GetDatabaseExplorerData(classUUID)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to get database explorer data: "+err.Error())
+		return nil, err
+	}
+	return data, nil
+}
+
 func (a *App) AddProfile(profile db.Profile) error {
 	return db.AddProfile(profile)
 }

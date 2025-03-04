@@ -4,12 +4,14 @@ import mindsetIcon from '../assets/images/mindset.png';
 import readingBookIcon from '../assets/images/reading-book.png';
 import dropperIcon from '../assets/images/dropper.png';
 import LearnMode from './LearnMode';
+import DropletExplorerModal from './DropletExplorerModal';
 
 const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(profile.name);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showLearnMode, setShowLearnMode] = useState(false);
+    const [showDropletExplorer, setShowDropletExplorer] = useState(false);
 
     const saveChanges = () => {
         if (editedName.trim() !== '' && editedName.trim() !== profile.name) {
@@ -62,6 +64,17 @@ const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
         document.body.style.overflow = '';
     };
 
+    //redirected to the droplet explorer modal
+    const handleEditDropletsClick = () => {
+        setShowDropletExplorer(true);
+        document.body.style.overflow = 'hidden';
+    };
+    
+    const handleDropletExplorerClose = () => {
+        setShowDropletExplorer(false);
+        document.body.style.overflow = '';
+    };
+
     if (showLearnMode) {
         return <LearnMode profile={profile} onClose={handleLearnClose} />;
     }
@@ -92,7 +105,8 @@ const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
                             </button>
                         </div>
                     </div>
-                    <button className="label-flasher-button">
+                    {/* fixed this */}
+                    <button className="label-flasher-button" onClick={handleEditDropletsClick}>
                         <img src={dropperIcon} alt="Edit Droplets" className="button-icon" />
                         <span className="label-flasher-tooltip">EDIT DROPLETS</span>
                     </button>
@@ -126,6 +140,13 @@ const ProfileMenu = ({ profile, onClose, onUpdateName, onDelete }) => {
                             </div>
                         </div>
                     </div>
+                )}
+
+                {showDropletExplorer && (
+                    <DropletExplorerModal 
+                        profile={profile} 
+                        onClose={handleDropletExplorerClose} 
+                    />
                 )}
             </div>
         </div>

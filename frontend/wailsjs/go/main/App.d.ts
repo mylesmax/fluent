@@ -12,6 +12,8 @@ export function EndSession(arg1:string,arg2:string):Promise<void>;
 
 export function GetClassSessions(arg1:string):Promise<Array<db.SessionData>>;
 
+export function GetDatabaseExplorerData(arg1:string):Promise<db.DatabaseExplorerData>;
+
 export function GetProfiles():Promise<Array<db.Profile>>;
 
 export function Greet(arg1:string):Promise<string>;

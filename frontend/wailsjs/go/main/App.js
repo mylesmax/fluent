@@ -22,6 +22,10 @@ export function GetClassSessions(arg1) {
   return window['go']['main']['App']['GetClassSessions'](arg1);
 }
 
+export function GetDatabaseExplorerData(arg1) {
+  return window['go']['main']['App']['GetDatabaseExplorerData'](arg1);
+}
+
 export function GetProfiles() {
   return window['go']['main']['App']['GetProfiles']();
 }

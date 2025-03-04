@@ -6,6 +6,7 @@ import rd1Gif from '../assets/gifs/rd1.gif';
 import splashGif from '../assets/gifs/splash.gif';
 import pourLoadGif from '../assets/gifs/pour-load.gif';
 import SimpleCup from './SimpleCup';
+import DropletExplorerModal from './DropletExplorerModal';
 import { CreateLearnSession, RecordAIUploadHistory, UpdateSessionChatHistory, EndSession } from '../../wailsjs/go/main/App';
 
 const LearnMode = ({ profile, onClose }) => {
@@ -15,6 +16,7 @@ const LearnMode = ({ profile, onClose }) => {
     const [uploadText, setUploadText] = useState('');
     const [isAITyping, setIsAITyping] = useState(false);
     const [sessionId, setSessionId] = useState(null);
+    const [showDropletExplorer, setShowDropletExplorer] = useState(false);
     
     const [currentDrops, setCurrentDrops] = useState(30);
     const [maxDrops, setMaxDrops] = useState(50);
@@ -320,7 +322,7 @@ const LearnMode = ({ profile, onClose }) => {
             .then(newSessionId => {
                 setSessionId(newSessionId);
                 
-                                setTimeout(() => {
+                setTimeout(() => {
                     setCurrentScreen('chat');
                     const initialConversation = [
                         { role: 'ai', content: `I've analyzed the content you provided about ${profile.name}. I've extracted some key concepts that we can explore together.` },
@@ -329,7 +331,7 @@ const LearnMode = ({ profile, onClose }) => {
                     
                     setConversation(initialConversation);
                     
-                                        UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify(initialConversation))
+                    UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify(initialConversation))
                         .catch(err => console.error("Failed to update chat history:", err));
                     
                 }, 3000);
@@ -337,7 +339,7 @@ const LearnMode = ({ profile, onClose }) => {
             .catch(err => {
                 console.error("Failed to create learn session:", err);
                 
-                                setTimeout(() => {
+                setTimeout(() => {
                     setCurrentScreen('chat');
                     setConversation([
                         { role: 'ai', content: `I've analyzed the content you provided about ${profile.name}. I've extracted some key concepts that we can explore together.` },
@@ -414,10 +416,10 @@ const LearnMode = ({ profile, onClose }) => {
             const updatedConversation = [...conversation, userMessage];
             UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
                 .catch(err => console.error("Failed to update chat history:", err));
-                
-                                            }
+
+        }
         
-                setTimeout(() => {
+        setTimeout(() => {
             setIsAITyping(false);
             const aiResponse = { 
                 role: 'ai', 
@@ -426,7 +428,7 @@ const LearnMode = ({ profile, onClose }) => {
             const updatedConversation = [...conversation, userMessage, aiResponse];
             setConversation(updatedConversation);
             
-                        if (sessionId) {
+            if (sessionId) {
                 UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
                     .catch(err => console.error("Failed to update chat history:", err));
             }
@@ -441,6 +443,17 @@ const LearnMode = ({ profile, onClose }) => {
                 handleSendMessage();
             }
         }
+    };
+
+    //redirected to the droplet explorer modal
+    const handleEditDropletsClick = () => {
+        setShowDropletExplorer(true);
+        document.body.style.overflow = 'hidden';
+    };
+    
+    const handleDropletExplorerClose = () => {
+        setShowDropletExplorer(false);
+        document.body.style.overflow = '';
     };
 
     const renderScreen = () => {
@@ -597,7 +610,7 @@ const LearnMode = ({ profile, onClose }) => {
         }
     };
 
-        useEffect(() => {
+    useEffect(() => {
         return () => {
             if (sessionId) {
                 EndSession(profile.classUUID, sessionId)
@@ -623,7 +636,7 @@ const LearnMode = ({ profile, onClose }) => {
                         ) : (
                             <h2 className="learn-mode-title">Learn: {profile.name}</h2>
                         )}
-                        <button className="edit-droplets-button">
+                        <button className="edit-droplets-button" onClick={handleEditDropletsClick}>
                             <img src={dropperIcon} alt="Edit droplets" className="button-icon" />
                             <span className="edit-droplets-tooltip">Edit Droplets</span>
                         </button>
@@ -631,6 +644,13 @@ const LearnMode = ({ profile, onClose }) => {
                 </>
             )}
             {renderScreen()}
+            
+            {showDropletExplorer && (
+                <DropletExplorerModal 
+                    profile={profile} 
+                    onClose={handleDropletExplorerClose} 
+                />
+            )}
         </div>
     );
 };
