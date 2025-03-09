@@ -38,4 +38,9 @@ ref/
 
 # db
 .fluent/
-backend/dbstructure.md
+backend/*.md
+
+# secret
+backend/secret/
+
+*.sh

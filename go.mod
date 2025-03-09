@@ -7,6 +7,7 @@ toolchain go1.23.0
 require (
 	github.com/google/uuid v1.3.0
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/sashabaranov/go-openai v1.19.4
 	github.com/wailsapp/wails/v2 v2.9.2
 )
 

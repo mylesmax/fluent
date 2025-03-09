@@ -4,14 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fluent/backend/db"
+	"fluent/backend/extraction"
+	"fluent/backend/openai"
 	"fmt"
+	"log"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx          context.Context
+	openaiClient *openai.OpenAIClient
+	extractor    *extraction.Extractor
 }
 
 // NewApp creates a new App application struct
@@ -30,9 +35,113 @@ func (a *App) startup(ctx context.Context) {
 		runtime.LogError(ctx, "Failed to init db: "+err.Error())
 	}
 
+	//init OpenAI client
+	a.openaiClient, err = openai.NewOpenAIClient()
+	if err != nil {
+		runtime.LogError(ctx, "Failed to init OpenAI client: "+err.Error())
+	}
+
+	//init the extractor
+	a.extractor = extraction.NewExtractor(a.openaiClient)
+
 	// Set window transparency
 	runtime.WindowSetBackgroundColour(ctx, 0, 0, 0, 0)
 	runtime.WindowSetDarkTheme(ctx)
+}
+
+// ProcessTextToFactoids processes uploaded text into factoids (THIS CALLS PARSING AGENT)
+func (a *App) ProcessTextToFactoids(classUUID string, sessionID string, text string) (string, error) {
+	if a.openaiClient == nil || a.extractor == nil {
+		return "", fmt.Errorf("openai client or extractor not initialized")
+	}
+
+	//process using the new extractor
+	factoids, err := a.extractor.ProcessTextToFactoids(a.ctx, text)
+	if err != nil {
+		runtime.LogError(a.ctx, "faildd to process text to factoids: "+err.Error())
+		return "", err
+	}
+
+	//convert to db
+	dbFactoids := make([]db.FactoidData, len(factoids))
+	for i, f := range factoids {
+		dbFactoids[i] = db.FactoidData{
+			Question:                 f.Question,
+			Answer:                   f.Answer,
+			Type:                     f.Type,
+			Verbatim:                 f.Verbatim,
+			Context:                  f.Context,
+			RequiresClarification:    f.RequiresClarification,
+			AlternativeSubjectsCount: f.AlternativeSubjectsCount,
+			Difficulty:               3, //default is middle difficulty
+			Examples:                 f.Examples,
+		}
+	}
+
+	//json
+	factoidsJSON, err := json.Marshal(dbFactoids)
+	if err != nil {
+		runtime.LogError(a.ctx, "failed to marshal factoids: "+err.Error())
+		return "", err
+	}
+
+	//store
+	err = db.StoreFactoids(classUUID, sessionID, string(factoidsJSON))
+	if err != nil {
+		runtime.LogError(a.ctx, "failed to store factoids: "+err.Error())
+		return "", err
+	}
+
+	log.Printf("proc'd and stored %d factoids", len(factoids))
+
+	return string(factoidsJSON), nil
+}
+
+// GetFactoids retrieves factoids for a class/course/profile
+func (a *App) GetFactoids(classUUID string) ([]db.FactoidData, error) {
+	factoids, err := db.GetFactoids(classUUID)
+	if err != nil {
+		runtime.LogError(a.ctx, "failed to get factoids: "+err.Error())
+		return nil, err
+	}
+	return factoids, nil
+}
+
+// GetDueFactoids retrieves factoids due for review
+func (a *App) GetDueFactoids(classUUID string) ([]db.FactoidData, error) {
+	factoids, err := db.GetDueFactoids(classUUID)
+	if err != nil {
+		runtime.LogError(a.ctx, "failed to get due factoids: "+err.Error())
+		return nil, err
+	}
+	return factoids, nil
+}
+
+// UpdateFactoidReview makes it update, after we already did the review
+func (a *App) UpdateFactoidReview(factoidID string, classUUID string, rating int) error {
+	var newStability float64 //this is a basic spaced repetition algorithm, i will prob replace with FSRS later
+	switch rating {
+	case 5: //perfect
+		newStability = 2.5
+	case 4:
+		newStability = 2.0
+	case 3:
+		newStability = 1.5
+	case 2:
+		newStability = 1.0
+	default: //failed
+		newStability = 0.5
+	}
+
+	nextReview := db.CalculateNextReview(newStability)
+
+	err := db.UpdateFactoidReview(factoidID, classUUID, rating, newStability, nextReview)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to update factoid review: "+err.Error())
+		return err
+	}
+
+	return nil
 }
 
 func (a *App) GetProfiles() []db.Profile {
