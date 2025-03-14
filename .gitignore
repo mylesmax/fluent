@@ -44,3 +44,7 @@ backend/*.md
 backend/secret/
 
 *.sh
+
+#tests that are wip
+backend/chatmaster/chatmaster_test.go
+backend/chatmaster/scheduler_test.go

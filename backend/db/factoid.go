@@ -312,3 +312,95 @@ func UpdateFactoidReview(factoidID string, classUUID string, rating int, newStab
 
 	return nil
 }
+
+// save a single factoid to the database and get id
+func StoreFactoid(classUUID string, factoid FactoidData) (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	_, err = classDB.Exec(`
+		CREATE TABLE IF NOT EXISTS factoids (
+			id TEXT PRIMARY KEY,
+			session_id TEXT NOT NULL,
+			question TEXT NOT NULL,
+			answer TEXT NOT NULL,
+			type TEXT NOT NULL,
+			verbatim TEXT NOT NULL,
+			context TEXT NOT NULL,
+			requires_clarification BOOLEAN NOT NULL,
+			alternative_subjects_count INTEGER NOT NULL,
+			difficulty INTEGER NOT NULL,
+			examples TEXT NOT NULL,
+			last_review TIMESTAMP NOT NULL,
+			next_review TIMESTAMP NOT NULL,
+			stability REAL NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		return "", fmt.Errorf("failed to create factoids table: %v", err)
+	}
+
+	factoid.ID = uuid.New().String()
+
+	now := time.Now()
+	sessionID := "default_session"
+
+	if factoid.LastReview.IsZero() {
+		factoid.LastReview = now
+	}
+
+	if factoid.NextReview.IsZero() {
+		factoid.NextReview = now.Add(24 * time.Hour)
+	}
+
+	if factoid.Stability == 0 {
+		factoid.Stability = 1.0 // default stability
+	}
+
+	if factoid.Difficulty == 0 {
+		factoid.Difficulty = 3 // middle difficulty
+	}
+
+	examplesJSON, err := json.Marshal(factoid.Examples)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal examples: %v", err)
+	}
+
+	// factoid addition logic
+	_, err = classDB.Exec(`
+		INSERT INTO factoids 
+		(id, session_id, question, answer, type, verbatim, context, requires_clarification, 
+		alternative_subjects_count, difficulty, examples, last_review, next_review, stability)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	`,
+		factoid.ID,
+		sessionID,
+		factoid.Question,
+		factoid.Answer,
+		factoid.Type,
+		factoid.Verbatim,
+		factoid.Context,
+		factoid.RequiresClarification,
+		factoid.AlternativeSubjectsCount,
+		factoid.Difficulty,
+		string(examplesJSON),
+		factoid.LastReview,
+		factoid.NextReview,
+		factoid.Stability,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to insert factoid: %v", err)
+	}
+
+	return factoid.ID, nil
+}

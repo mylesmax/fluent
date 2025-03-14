@@ -1,0 +1,116 @@
+[
+  {
+    "question": "What is the primary function of the olfactory system?",
+    "answer": "The olfactory system is responsible for our sense of smell; it detects chemical molecules in the air and transmits signals to the brain, where they are interpreted as odors.",
+    "type": "factual",
+    "verbatim": "The olfactory system is responsible for our sense of smell. It detects chemical molecules in the air and transmits signals to the brain, where they are interpreted as odors.",
+    "context": "This introduces the overall role of the olfactory system and its connection to odor perception.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  },
+  {
+    "question": "What happens when an odor molecule binds to a receptor on an olfactory sensory neuron?",
+    "answer": "When an odor molecule binds to a receptor, it triggers a cascade of molecular events within the neuron, resulting in the generation of an electrical signal.",
+    "type": "factual",
+    "verbatim": "When an odor molecule binds to a receptor, it triggers a cascade of molecular events within the neuron, resulting in the generation of an electrical signal.",
+    "context": "This explains the initial cellular reaction that converts a chemical stimulus into an electrical signal in the olfactory system.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  },
+  {
+    "question": "Which structure is considered the primary olfactory cortex and what is its function?",
+    "answer": "The piriform cortex is the primary olfactory cortex, and it is responsible for odor identification and discrimination.",
+    "type": "factual",
+    "verbatim": "The piriform cortex is considered the primary olfactory cortex and is responsible for odor identification and discrimination.",
+    "context": "This fact clarifies the role and identity of the brain region that processes olfactory information.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  },
+  {
+    "question": "What are some disorders associated with the olfactory system?",
+    "answer": "Disorders of the olfactory system include anosmia (complete loss of smell), hyposmia (reduced ability to smell), and parosmia (distorted perception of smells).",
+    "type": "factual",
+    "verbatim": "Disorders of the olfactory system include anosmia (complete loss of smell), hyposmia (reduced ability to smell), and parosmia (distorted perception of smells).",
+    "context": "This fact outlines common conditions affecting the olfactory system, which can have various causes.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  },
+  {
+    "question": "What is combinatorial coding in the olfactory system, and how does it enable odor discrimination?",
+    "answer": "Combinatorial coding refers to the system where each olfactory sensory neuron expresses only one type of receptor, but each receptor can bind to multiple odor molecules—and each odor molecule can bind to multiple receptors. This system allows humans to discriminate among thousands of different odors.",
+    "type": "conceptual",
+    "verbatim": "Each olfactory sensory neuron expresses only one type of receptor, but each receptor can bind to multiple odor molecules and each odor molecule can bind to multiple receptors. This combinatorial coding system allows humans to discriminate among thousands of different odors.",
+    "context": "This concept explains the complex mechanism behind how a limited set of receptors can detect a vast array of odor molecules.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [
+      "Distinguishing between various floral scents in a garden.",
+      "Identifying specific food aromas in a complex dish."
+    ],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  },
+  {
+    "question": "Can you describe the pathway an olfactory signal takes from the nasal cavity to the brain?",
+    "answer": "Odor molecules enter the nasal cavity and dissolve in the mucus where they bind to receptor proteins on the cilia of olfactory sensory neurons. The binding triggers a cascade that produces an electrical signal, which travels along the neuron's axon, passes through the cribriform plate to the olfactory bulb, where it synapses with mitral and tufted cells in glomeruli, and then projects to various brain regions including the piriform cortex, amygdala, and entorhinal cortex.",
+    "type": "conceptual",
+    "verbatim": "When an odor molecule binds to a receptor, it triggers a cascade of molecular events within the neuron, resulting in the generation of an electrical signal. This signal travels along the neuron's axon, passing through the cribriform plate of the ethmoid bone to reach the olfactory bulb, a structure at the base of the brain. Within the olfactory bulb, the axons of olfactory sensory neurons synapse with second-order neurons called mitral cells and tufted cells in specialized structures called glomeruli. Each glomerulus receives input from olfactory sensory neurons expressing the same type of receptor. From the olfactory bulb, mitral and tufted cells project to various brain regions, including the piriform cortex, amygdala, and entorhinal cortex.",
+    "context": "This concept provides a comprehensive overview of how olfactory information is transmitted from the point of detection to the brain regions involved in processing the signal.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [
+      "Understanding why a particular scent can immediately evoke memories or emotions."
+    ],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  },
+  {
+    "question": "How does the olfactory system exhibit plasticity and what practical implications does this have?",
+    "answer": "The olfactory system shows plasticity by adapting to persistent odors—a process known as adaptation—and through neurogenesis, where new sensory neurons are generated throughout life to replace damaged ones. This means that the system can adjust to long-term odor exposure and recover from injuries, ensuring continued sensitivity to smells.",
+    "type": "conceptual",
+    "verbatim": "The olfactory system exhibits remarkable plasticity and can adapt to persistent odors through a process called adaptation. Additionally, the olfactory epithelium has the capacity for neurogenesis, with new sensory neurons being generated throughout life to replace damaged ones.",
+    "context": "This concept highlights the dynamic and adaptive nature of the olfactory system, which is essential for maintaining its function despite continuous exposure to odors and potential damage.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [
+      "Adjusting to a consistently strong perfume in an environment.",
+      "Recovery of olfactory function after minor nasal injuries."
+    ],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  },
+  {
+    "question": "Why is the direct connection of the olfactory system to the limbic system significant?",
+    "answer": "The direct pathway from the olfactory system to the limbic system is significant because it bypasses the thalamus, enabling odors to evoke immediate emotional responses and memories. This direct connection underpins the strong link between smell, emotion, and memory.",
+    "type": "conceptual",
+    "verbatim": "Unlike other sensory systems, olfactory signals do not pass through the thalamus before reaching the cortex. This direct pathway to the limbic system underscores the intimate connection between smell, emotion, and memory.",
+    "context": "This concept explains the neural basis for why smells can trigger vivid emotional reactions or memories, reflecting the unique wiring of the olfactory system.",
+    "requires_clarification": false,
+    "alternative_subjects_count": 0,
+    "difficulty": 3,
+    "examples": [
+      "A familiar scent evoking childhood memories or strong emotions."
+    ],
+    "last_review": "0001-01-01T00:00:00Z",
+    "next_review": "0001-01-01T00:00:00Z"
+  }
+]
