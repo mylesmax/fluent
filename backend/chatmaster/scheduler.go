@@ -86,7 +86,7 @@ func (s *Scheduler) EnqueueFactoids(ctx context.Context, classUUID string, facto
 		queue.Items = queue.Items[1:]
 	}
 
-	session, err := s.chatMaster.SaveFactoidsToSession(classUUID, dbFactoids)
+	session, err := s.chatMaster.SaveFactoidsToSession(dbFactoids, classUUID)
 	if err != nil {
 		return fmt.Errorf("couldn't create/upd. chat session: %v", err)
 	}
