@@ -98,6 +98,42 @@ func createClassDB(classDBPath string, classUUID string, initialName string) err
 		return err
 	}
 
+	_, err = classDB.Exec(`
+		CREATE TABLE IF NOT EXISTS sessions (
+			id TEXT PRIMARY KEY,
+			upload_prompt TEXT NOT NULL,
+			chat_history TEXT NOT NULL,
+			start_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			end_timestamp TIMESTAMP
+		);
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to create sessions table: %v", err)
+	}
+
+	_, err = classDB.Exec(`
+		CREATE TABLE IF NOT EXISTS factoids (
+			id TEXT PRIMARY KEY,
+			session_id TEXT,
+			question TEXT NOT NULL,
+			answer TEXT NOT NULL,
+			type TEXT,
+			verbatim TEXT,
+			context TEXT,
+			requires_clarification INTEGER,
+			alternative_subjects_count INTEGER,
+			difficulty INTEGER,
+			examples TEXT,
+			last_review TIMESTAMP,
+			next_review TIMESTAMP,
+			stability REAL DEFAULT 1.0,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to create factoids table: %v", err)
+	}
+
 	nameHistory := []string{initialName}
 	nameHistoryJSON, err := json.Marshal(nameHistory)
 	if err != nil {
@@ -111,203 +147,179 @@ func createClassDB(classDBPath string, classUUID string, initialName string) err
 	return err
 }
 
-func InitDB() (*sql.DB, error) {
-	var err error
-	once.Do(func() {
-		if err = ensureDataDirs(); err != nil {
-			log.Printf("Failed to create .fluent directories: %v", err)
-			return
-		}
+func FixExistingClassDatabases() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %v", err)
+	}
 
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			log.Printf("Failed to get home directory: %v", err)
-			return
-		}
+	classDir := filepath.Join(homeDir, ".fluent", "class")
+	files, err := os.ReadDir(classDir)
+	if err != nil {
+		return fmt.Errorf("failed to read class directory: %v", err)
+	}
 
-		dbPath := filepath.Join(homeDir, ".fluent", "user", "profiles.db")
-		db, err = sql.Open("sqlite3", dbPath)
-		if err != nil {
-			log.Printf("Failed to open database: %v", err)
-			return
-		}
+	for _, file := range files {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".db" {
+			dbPath := filepath.Join(classDir, file.Name())
+			log.Printf("Checking class database: %s", dbPath)
 
-		_, err = db.Exec(`
-			CREATE TABLE IF NOT EXISTS profiles (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				name TEXT NOT NULL UNIQUE,
-				emoji TEXT NOT NULL,
-				glow_color TEXT NOT NULL,
-				current_drops INTEGER DEFAULT 0
-			);
-		`)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-
-		columns := []struct {
-			name string
-			def  string
-		}{
-			{"class_db_path", "TEXT"},
-			{"class_uuid", "TEXT"},
-			{"is_add_new", "BOOLEAN DEFAULT 0"},
-			{"active", "BOOLEAN DEFAULT 1"},
-		}
-
-		for _, col := range columns {
-			var exists bool
-			err := db.QueryRow(`
-				SELECT COUNT(*) > 0 
-				FROM pragma_table_info('profiles') 
-				WHERE name = ?
-			`, col.name).Scan(&exists)
-
+			classDB, err := sql.Open("sqlite3", dbPath)
 			if err != nil {
-				log.Printf("err checkin column %s: %v", col.name, err)
+				log.Printf("Error opening class database %s: %v", dbPath, err)
 				continue
 			}
 
-			if !exists {
-				_, err = db.Exec(fmt.Sprintf(`
-					ALTER TABLE profiles ADD COLUMN %s %s;
-				`, col.name, col.def))
-				if err != nil {
-					log.Printf("err adding column %s: %v", col.name, err)
-				}
-			}
-		}
-
-		rows, err := db.Query(`
-			SELECT id, name 
-			FROM profiles 
-			WHERE (class_uuid IS NULL OR class_uuid = '') AND name != 'Add New';
-		`)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var id int
-			var name string
-			if err := rows.Scan(&id, &name); err != nil {
-				log.Printf("Error scanning profile: %v", err)
-				continue
-			}
-
-			classUUID := uuid.New().String()
-			classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
-
-			if err := createClassDB(classDBPath, classUUID, name); err != nil {
-				log.Printf("Error creating class DB for %s: %v", name, err)
-				continue
-			}
-
-			_, err = db.Exec(`
-				UPDATE profiles 
-				SET class_uuid = ?, class_db_path = ?, active = 1
-				WHERE id = ?
-			`, classUUID, classDBPath, id)
+			var tableName string
+			err = classDB.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name='sessions'").Scan(&tableName)
 			if err != nil {
-				log.Printf("Error updating profile %s with UUID: %v", name, err)
-				continue
-			}
-		}
+				log.Printf("Creating missing sessions table in %s", dbPath)
 
-		rows2, err := db.Query(`
-			SELECT name, class_db_path, class_uuid 
-			FROM profiles 
-			WHERE class_db_path IS NOT NULL AND name != 'Add New';
-		`)
-		if err != nil {
-			log.Printf("err querying existing profs: %v", err)
-			return
-		}
-		defer rows2.Close()
-
-		for rows2.Next() {
-			var name, classDBPath, classUUID string
-			if err := rows2.Scan(&name, &classDBPath, &classUUID); err != nil {
-				log.Printf("err scanning existing prof: %v", err)
-				continue
-			}
-
-			classDB, err := sql.Open("sqlite3", classDBPath)
-			if err != nil {
-				log.Printf("err opening class DB %s: %v", classDBPath, err)
-				continue
-			}
-
-			_, err = classDB.Exec(`
-				CREATE TABLE IF NOT EXISTS class_info (
-					uuid TEXT PRIMARY KEY,
-					created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-					last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-					name_history TEXT NOT NULL DEFAULT '[]'
-				)
-			`)
-			if err != nil {
-				log.Printf("err creating class_info table: %v", err)
-				classDB.Close()
-				continue
-			}
-
-			//check
-			var exists bool
-			err = classDB.QueryRow(`
-				SELECT EXISTS(
-					SELECT 1 FROM class_info WHERE uuid = ?
-				)
-			`, classUUID).Scan(&exists)
-
-			if err != nil {
-				log.Printf("err checkin UUID existence: %v", err)
-				classDB.Close()
-				continue
-			}
-
-			if !exists {
-				//init
-				nameHistory := []string{name}
-				nameHistoryJSON, _ := json.Marshal(nameHistory)
 				_, err = classDB.Exec(`
-					INSERT INTO class_info (uuid, name_history)
-					VALUES (?, ?)
-				`, classUUID, string(nameHistoryJSON))
+					CREATE TABLE IF NOT EXISTS sessions (
+						id TEXT PRIMARY KEY,
+						upload_prompt TEXT NOT NULL,
+						chat_history TEXT NOT NULL,
+						start_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+						end_timestamp TIMESTAMP
+					);
+				`)
 				if err != nil {
-					log.Printf("err initializing class_info: %v", err)
-				}
-			} else {
-				//check
-				var nameHistoryJSON string
-				err = classDB.QueryRow(`
-					SELECT name_history FROM class_info WHERE uuid = ?
-				`, classUUID).Scan(&nameHistoryJSON)
-
-				if err != nil || nameHistoryJSON == "" || nameHistoryJSON == "[]" {
-					//reset
-					nameHistory := []string{name}
-					nameHistoryJSON, _ := json.Marshal(nameHistory)
-					_, err = classDB.Exec(`
-						UPDATE class_info 
-						SET name_history = ?
-						WHERE uuid = ?
-					`, string(nameHistoryJSON), classUUID)
-					if err != nil {
-						log.Printf("err resetting name_history: %v", err)
-					}
+					log.Printf("Error creating sessions table for class %s: %v", file.Name(), err)
+				} else {
+					log.Printf("Successfully created sessions table in %s", dbPath)
 				}
 			}
 
 			classDB.Close()
 		}
+	}
 
-		initAIHistoryDatabases()
-	})
+	return nil
+}
+
+func InitDB() (*sql.DB, error) {
+	if err := ensureDataDirs(); err != nil {
+		return nil, fmt.Errorf("failed to ensure data directories: %v", err)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	dbPath := filepath.Join(homeDir, ".fluent", "profiles.db")
+	db, err = sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %v", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS profiles (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			emoji TEXT,
+			glow_color TEXT,
+			current_drops INTEGER DEFAULT 0,
+			class_db_path TEXT,
+			class_uuid TEXT,
+			is_add_new INTEGER DEFAULT 0,
+			active INTEGER DEFAULT 1
+		);
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create profiles table: %v", err)
+	}
+	initAIHistoryDatabases()
+
+	if err := initClassDatabases(); err != nil {
+		log.Printf("Warning: Error initializing some class databases: %v", err)
+	}
+
+	if err := FixExistingClassDatabases(); err != nil {
+		log.Printf("warning: error fixing some class databases: %v", err)
+	}
+
 	return db, err
+}
+
+func initClassDatabases() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	rows, err := db.Query("SELECT class_uuid FROM profiles WHERE class_uuid IS NOT NULL")
+	if err != nil {
+		return fmt.Errorf("failed to query class UUIDs: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var classUUID string
+		if err := rows.Scan(&classUUID); err != nil {
+			log.Printf("Error scanning class UUID: %v", err)
+			continue
+		}
+
+		classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+		classDB, err := sql.Open("sqlite3", classDBPath)
+		if err != nil {
+			log.Printf("Error opening class database %s: %v", classDBPath, err)
+			continue
+		}
+		defer classDB.Close()
+
+		_, err = classDB.Exec(`
+			CREATE TABLE IF NOT EXISTS sessions (
+				id TEXT PRIMARY KEY,
+				upload_prompt TEXT NOT NULL,
+				chat_history TEXT NOT NULL,
+				start_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				end_timestamp TIMESTAMP
+			);
+		`)
+		if err != nil {
+			log.Printf("Error creating sessions table for class %s: %v", classUUID, err)
+		}
+
+		_, err = classDB.Exec(`
+			CREATE TABLE IF NOT EXISTS factoids (
+				id TEXT PRIMARY KEY,
+				session_id TEXT,
+				question TEXT NOT NULL,
+				answer TEXT NOT NULL,
+				type TEXT,
+				verbatim TEXT,
+				context TEXT,
+				requires_clarification INTEGER,
+				alternative_subjects_count INTEGER,
+				difficulty INTEGER,
+				examples TEXT,
+				last_review TIMESTAMP,
+				next_review TIMESTAMP,
+				stability REAL DEFAULT 1.0,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);
+		`)
+		if err != nil {
+			log.Printf("Error creating factoids table for class %s: %v", classUUID, err)
+		}
+
+		_, err = classDB.Exec(`
+			CREATE TABLE IF NOT EXISTS class_info (
+				uuid TEXT PRIMARY KEY,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+				name_history TEXT DEFAULT '[]'
+			);
+		`)
+		if err != nil {
+			log.Printf("Error creating class_info table for class %s: %v", classUUID, err)
+		}
+	}
+
+	return nil
 }
 
 func initAIHistoryDatabases() {
@@ -744,4 +756,54 @@ func EndSession(classUUID, sessionID string) error {
 	`, sessionID)
 
 	return err
+}
+
+func GetFactoid(classUUID, factoidID string) (FactoidData, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return FactoidData{}, fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return FactoidData{}, fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	var factoid FactoidData
+	var examplesJSON string
+
+	err = classDB.QueryRow(`
+		SELECT id, question, answer, type, verbatim, context, requires_clarification, 
+		alternative_subjects_count, difficulty, examples, stability, next_review
+		FROM factoids WHERE id = ?
+	`, factoidID).Scan(
+		&factoid.ID,
+		&factoid.Question,
+		&factoid.Answer,
+		&factoid.Type,
+		&factoid.Verbatim,
+		&factoid.Context,
+		&factoid.RequiresClarification,
+		&factoid.AlternativeSubjectsCount,
+		&factoid.Difficulty,
+		&examplesJSON,
+		&factoid.Stability,
+		&factoid.NextReview,
+	)
+	if err != nil {
+		return FactoidData{}, fmt.Errorf("failed to retrieve factoid: %v", err)
+	}
+
+	if examplesJSON != "" {
+		err = json.Unmarshal([]byte(examplesJSON), &factoid.Examples)
+		if err != nil {
+			factoid.Examples = []string{}
+		}
+	} else {
+		factoid.Examples = []string{}
+	}
+
+	return factoid, nil
 }

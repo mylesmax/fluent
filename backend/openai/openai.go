@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/sashabaranov/go-openai"
 )
@@ -133,30 +135,54 @@ func (c *OpenAIClient) GetModel() string {
 }
 
 func DeterminePromptsPath() string {
-	//this is a bit of a mess, but it works
-	//such a headache to get the proper path with all the test directories, wails, main directories, etc
-	paths := []string{
+	possiblePaths := []string{
 		"secret/prompts",
-		"../secret/prompts",
-		"../../backend/secret/prompts",
 		"backend/secret/prompts",
+		filepath.Join(os.Getenv("HOME"), ".fluent", "prompts"),
 	}
 
-	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
+	for _, path := range possiblePaths {
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			log.Printf("found prompts directory at: %s", path)
 			return path
 		}
 	}
 
-	return "../secret/prompts"
+	homePromptsDir := filepath.Join(os.Getenv("HOME"), ".fluent", "prompts")
+	if err := os.MkdirAll(homePromptsDir, 0755); err == nil {
+		log.Printf("Created prompts directory at: %s", homePromptsDir)
+
+		defaultPrompts := []string{"factoid_extraction.txt", "chatmaster.txt"}
+		for _, promptFile := range defaultPrompts {
+			for _, basePath := range []string{"secret/prompts", "backend/secret/prompts"} {
+				srcPath := filepath.Join(basePath, promptFile)
+				if _, err := os.Stat(srcPath); err == nil {
+					content, err := os.ReadFile(srcPath)
+					if err == nil {
+						destPath := filepath.Join(homePromptsDir, promptFile)
+						err = os.WriteFile(destPath, content, 0644)
+						if err == nil {
+							log.Printf("copied default prompt %s to %s", promptFile, destPath)
+						}
+					}
+					break
+				}
+			}
+		}
+
+		return homePromptsDir
+	}
+
+	log.Printf("WARNING: could not find or create a prompts directory, using default path: %s", possiblePaths[0])
+	return possiblePaths[0]
 }
 
-func LoadPrompt(promptPath string) (string, error) {
-	promptBytes, err := os.ReadFile(promptPath)
+func LoadPrompt(path string) (string, error) {
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
-	return string(promptBytes), nil
+	return string(content), nil
 }
 
 func EstimateTokens(text string) int {

@@ -38,7 +38,7 @@ func NewScheduler(chatMaster *ChatMaster) *Scheduler {
 func (s *Scheduler) EnqueueFactoids(ctx context.Context, classUUID string, factoids []openai.Factoid) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	dbFactoids := make([]db.FactoidData, 0, len(factoids))
 	for _, f := range factoids {
 		dbFactoid := db.FactoidData{
@@ -76,7 +76,7 @@ func (s *Scheduler) EnqueueFactoids(ctx context.Context, classUUID string, facto
 		}
 		s.activeQueues[classUUID] = queue
 	}
-	
+
 	for _, f := range dbFactoids {
 		queue.Items = append(queue.Items, f.ID)
 	}
@@ -179,7 +179,7 @@ func (s *Scheduler) GetSessionProgress(classUUID string) (map[string]interface{}
 	if !exists {
 		return nil, errors.New("no active session for this class")
 	}
-	
+
 	return s.chatMaster.GetSessionStatistics(classUUID, sessionID)
 }
 
@@ -198,7 +198,7 @@ func (s *Scheduler) ResetQueue(classUUID string) error {
 	}
 	allFactoids = append(allFactoids, queue.Completed...)
 	allFactoids = append(allFactoids, queue.Postponed...)
-	
+
 	queue.Items = allFactoids
 	queue.Current = ""
 	queue.Completed = []string{}
@@ -220,7 +220,7 @@ func (s *Scheduler) CreateSessionFromOlfactionDemo(extractor *extraction.Extract
 		return fmt.Errorf("failed to load olfaction text: %v", err)
 	}
 
-	factoids, err := extractor.ProcessTextToFactoids(ctx, olfactionText)
+	factoids, err := extractor.ProcessTextToFactoids(ctx, olfactionText, classUUID, "demo_session")
 	if err != nil {
 		return fmt.Errorf("failed to process olfaction text: %v", err)
 	}

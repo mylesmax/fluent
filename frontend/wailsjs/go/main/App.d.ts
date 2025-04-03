@@ -14,17 +14,35 @@ export function GetClassSessions(arg1:string):Promise<Array<db.SessionData>>;
 
 export function GetDatabaseExplorerData(arg1:string):Promise<db.DatabaseExplorerData>;
 
+export function GetDueFactoids(arg1:string):Promise<Array<db.FactoidData>>;
+
+export function GetFactoids(arg1:string):Promise<Array<db.FactoidData>>;
+
 export function GetProfiles():Promise<Array<db.Profile>>;
 
+export function GetSessionStatistics(arg1:string,arg2:string):Promise<{[key: string]: any}>;
+
 export function Greet(arg1:string):Promise<string>;
+
+export function ListSessionsByActivity(arg1:string):Promise<Array<string>>;
+
+export function ProcessTextToFactoids(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function ProcessUserMessage(arg1:string,arg2:string):Promise<{[key: string]: any}>;
 
 export function RecordAIChatHistory(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:number):Promise<void>;
 
 export function RecordAIParserHistory(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:number):Promise<void>;
 
-export function RecordAIUploadHistory(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number,arg6:number):Promise<void>;
+export function RecordAIUploadHistory(arg1:string,arg2:string):Promise<void>;
+
+export function ResumeSession(arg1:string,arg2:string):Promise<void>;
+
+export function StartSessionConversation(arg1:string):Promise<string>;
 
 export function UpdateDrops(arg1:string,arg2:number):Promise<void>;
+
+export function UpdateFactoidReview(arg1:string,arg2:string,arg3:number):Promise<void>;
 
 export function UpdateProfileGlowColor(arg1:string,arg2:string):Promise<void>;
 

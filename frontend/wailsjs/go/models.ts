@@ -49,6 +49,7 @@ export namespace db {
 	    uploads: ExplorerAIHistoryEntry[];
 	    chats: ExplorerAIHistoryEntry[];
 	    parser: ExplorerAIHistoryEntry[];
+	    extractor: ExplorerAIHistoryEntry[];
 	
 	    static createFrom(source: any = {}) {
 	        return new AIHistoryEntries(source);
@@ -59,6 +60,7 @@ export namespace db {
 	        this.uploads = this.convertValues(source["uploads"], ExplorerAIHistoryEntry);
 	        this.chats = this.convertValues(source["chats"], ExplorerAIHistoryEntry);
 	        this.parser = this.convertValues(source["parser"], ExplorerAIHistoryEntry);
+	        this.extractor = this.convertValues(source["extractor"], ExplorerAIHistoryEntry);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -120,11 +122,15 @@ export namespace db {
 	export class SessionInfo {
 	    id: string;
 	    upload_prompt: string;
+	    topic: string;
 	    chat_history: number[];
 	    // Go type: time
 	    start_timestamp: any;
 	    // Go type: time
 	    end_timestamp?: any;
+	    status: string;
+	    droplet_count: number;
+	    total_factoids?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new SessionInfo(source);
@@ -134,9 +140,13 @@ export namespace db {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.upload_prompt = source["upload_prompt"];
+	        this.topic = source["topic"];
 	        this.chat_history = source["chat_history"];
 	        this.start_timestamp = this.convertValues(source["start_timestamp"], null);
 	        this.end_timestamp = this.convertValues(source["end_timestamp"], null);
+	        this.status = source["status"];
+	        this.droplet_count = source["droplet_count"];
+	        this.total_factoids = source["total_factoids"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -192,6 +202,67 @@ export namespace db {
 		}
 	}
 	
+	export class FactoidData {
+	    id: string;
+	    class_uuid: string;
+	    question: string;
+	    answer: string;
+	    type: string;
+	    verbatim: string;
+	    context: string;
+	    requires_clarification: boolean;
+	    alternative_subjects_count: number;
+	    difficulty: number;
+	    examples: string[];
+	    // Go type: time
+	    last_review: any;
+	    // Go type: time
+	    next_review: any;
+	    stability: number;
+	    // Go type: time
+	    created_at: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new FactoidData(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.class_uuid = source["class_uuid"];
+	        this.question = source["question"];
+	        this.answer = source["answer"];
+	        this.type = source["type"];
+	        this.verbatim = source["verbatim"];
+	        this.context = source["context"];
+	        this.requires_clarification = source["requires_clarification"];
+	        this.alternative_subjects_count = source["alternative_subjects_count"];
+	        this.difficulty = source["difficulty"];
+	        this.examples = source["examples"];
+	        this.last_review = this.convertValues(source["last_review"], null);
+	        this.next_review = this.convertValues(source["next_review"], null);
+	        this.stability = source["stability"];
+	        this.created_at = this.convertValues(source["created_at"], null);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Profile {
 	    id: number;
 	    name: string;

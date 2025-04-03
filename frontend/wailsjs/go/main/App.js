@@ -26,12 +26,36 @@ export function GetDatabaseExplorerData(arg1) {
   return window['go']['main']['App']['GetDatabaseExplorerData'](arg1);
 }
 
+export function GetDueFactoids(arg1) {
+  return window['go']['main']['App']['GetDueFactoids'](arg1);
+}
+
+export function GetFactoids(arg1) {
+  return window['go']['main']['App']['GetFactoids'](arg1);
+}
+
 export function GetProfiles() {
   return window['go']['main']['App']['GetProfiles']();
 }
 
+export function GetSessionStatistics(arg1, arg2) {
+  return window['go']['main']['App']['GetSessionStatistics'](arg1, arg2);
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
+}
+
+export function ListSessionsByActivity(arg1) {
+  return window['go']['main']['App']['ListSessionsByActivity'](arg1);
+}
+
+export function ProcessTextToFactoids(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ProcessTextToFactoids'](arg1, arg2, arg3);
+}
+
+export function ProcessUserMessage(arg1, arg2) {
+  return window['go']['main']['App']['ProcessUserMessage'](arg1, arg2);
 }
 
 export function RecordAIChatHistory(arg1, arg2, arg3, arg4, arg5, arg6) {
@@ -42,12 +66,24 @@ export function RecordAIParserHistory(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['RecordAIParserHistory'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
-export function RecordAIUploadHistory(arg1, arg2, arg3, arg4, arg5, arg6) {
-  return window['go']['main']['App']['RecordAIUploadHistory'](arg1, arg2, arg3, arg4, arg5, arg6);
+export function RecordAIUploadHistory(arg1, arg2) {
+  return window['go']['main']['App']['RecordAIUploadHistory'](arg1, arg2);
+}
+
+export function ResumeSession(arg1, arg2) {
+  return window['go']['main']['App']['ResumeSession'](arg1, arg2);
+}
+
+export function StartSessionConversation(arg1) {
+  return window['go']['main']['App']['StartSessionConversation'](arg1);
 }
 
 export function UpdateDrops(arg1, arg2) {
   return window['go']['main']['App']['UpdateDrops'](arg1, arg2);
+}
+
+export function UpdateFactoidReview(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateFactoidReview'](arg1, arg2, arg3);
 }
 
 export function UpdateProfileGlowColor(arg1, arg2) {

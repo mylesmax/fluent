@@ -7,7 +7,18 @@ import splashGif from '../assets/gifs/splash.gif';
 import pourLoadGif from '../assets/gifs/pour-load.gif';
 import SimpleCup from './SimpleCup';
 import DropletExplorerModal from './DropletExplorerModal';
-import { CreateLearnSession, RecordAIUploadHistory, UpdateSessionChatHistory, EndSession } from '../../wailsjs/go/main/App';
+import { 
+    CreateLearnSession, 
+    RecordAIUploadHistory, 
+    UpdateSessionChatHistory, 
+    EndSession,
+    ProcessUserMessage,
+    GetSessionStatistics,
+    ListSessionsByActivity,
+    ResumeSession,
+    StartSessionConversation,
+    UpdateDrops
+} from '../../wailsjs/go/main/App';
 
 const LearnMode = ({ profile, onClose }) => {
     const [currentScreen, setCurrentScreen] = useState('welcome');
@@ -17,8 +28,15 @@ const LearnMode = ({ profile, onClose }) => {
     const [isAITyping, setIsAITyping] = useState(false);
     const [sessionId, setSessionId] = useState(null);
     const [showDropletExplorer, setShowDropletExplorer] = useState(false);
+    const [showSessionSelector, setShowSessionSelector] = useState(false);
+    const [availableSessions, setAvailableSessions] = useState([]);
+    const [sessionStats, setSessionStats] = useState(null);
+    const [factoids, setFactoids] = useState([]);
+    const [isPostponeResponsePending, setIsPostponeResponsePending] = useState(false);
     
-    const [currentDrops, setCurrentDrops] = useState(30);
+    const [lastKnownDropsAwarded, setLastKnownDropsAwarded] = useState(0);
+    const [dropsBeingAnimated, setDropsBeingAnimated] = useState(0);
+    const [currentDrops, setCurrentDrops] = useState(profile?.currentDrops || 0);
     const [maxDrops, setMaxDrops] = useState(50);
     const [isAnimatingDrop, setIsAnimatingDrop] = useState(false);
     const [dropAnimation, setDropAnimation] = useState(null);
@@ -27,12 +45,136 @@ const LearnMode = ({ profile, onClose }) => {
     
     const cupRef = useRef(null);
     const messagesContainerRef = useRef(null);
+    const messagesEndRef = useRef(null);
+    const inputRef = useRef(null);
+    const welcomeAnimationDone = useRef(false);
+    const welcomeTextRef = useRef('');
+    const animationTimer = useRef(null);
+    const animationTimeoutRef = useRef(null);
+    
+    const welcomeFullText = `Let's get Fluent in ${profile.name}.`;
+    const typingSpeedMs = 30;
+    const [welcomeSubtext, setWelcomeSubtext] = useState('');
+    const animationDuration = 5000;
+    
+    const [isIntentionalClose, setIsIntentionalClose] = useState(false);
     
     const handleCupClick = () => {
+        setTriggerShake(prev => prev + 1);
+    };
+    
+    useEffect(() => {
+        if (profile && profile.classUUID) {
+            setCurrentScreen('welcome');
+            
+            ListSessionsByActivity(profile.classUUID)
+                .then(sessions => {
+                    if (sessions && sessions.length > 0) {
+                        setAvailableSessions(sessions);
+                    }
+                })
+                .catch(err => console.error("failed:", err));
+        }
+    }, [profile]);
+    
+    useEffect(() => {
+        if (profile && profile.currentDrops !== undefined) {
+            //todo
+        }
+    }, [profile]);
+    
+    const handleSessionResume = (selectedSessionId) => {
+        if (!selectedSessionId) return;
+        
+        console.log("Resuming session:", selectedSessionId);
+        setSessionId(selectedSessionId);
+        setShowDropletExplorer(false);
+        
+        setIsAITyping(true);
+        
+        GetSessionStatistics(profile.classUUID, selectedSessionId)
+            .then(stats => {
+                console.log("got the session stats:", {
+                    sessionId: selectedSessionId,
+                    factoids: stats.factoids?.length || 0,
+                    status: stats.status
+                });
+                
+                setSessionStats(stats);
+                
+                console.log("resume session with:", { 
+                    profileDrops: profile.currentDrops || 0,
+                    sessionDropsAwarded: stats.drops_awarded || 0
+                });
+                
+                //drops restored
+                setCurrentDrops(stats.drops_awarded || 0);
+                setLastKnownDropsAwarded(stats.drops_awarded || 0);
+                
+                if (stats.total_factoids) {
+                    setMaxDrops(stats.total_factoids);
+                }
+                
+                const sessionHistory = stats.chat_history || [];
+                const formattedConversation = sessionHistory.map(exchange => [
+                    { role: 'user', content: exchange.user_message },
+                    { role: 'ai', content: exchange.system_message }
+                ]).flat();
+                
+                if (formattedConversation.length === 0) {
+                    const welcomeMessage = { 
+                        role: 'ai', 
+                        content: `Welcome back to your ${profile.name} learning session!` 
+                    };
+                    //todo: fix this later
+                    setConversation([welcomeMessage]);
+                    setCurrentScreen('chat');
+                    ResumeSession(profile.classUUID, selectedSessionId)
+                        .then(() => {
+                            console.log("Session resumed successfully");
+                            return StartSessionConversation(profile.classUUID);
+                        })
+                        .then(response => {
+                            const initialConversation = [
+                                welcomeMessage,
+                                { role: 'ai', content: response }
+                            ];
+                            setConversation(initialConversation);
+                            setIsAITyping(false);
+                            
+                            UpdateSessionChatHistory(profile.classUUID, selectedSessionId, JSON.stringify(initialConversation))
+                                .catch(err => console.error("failed to update chat history:", err));
+                        })
+                        .catch(err => {
+                            console.error("failed to start session conversation (trying to resume it):", err);
+                            setIsAITyping(false);
+                            setConversation([welcomeMessage]);//just default to basic
+                        });
+                } else {
+                    setConversation(formattedConversation);
+                    setIsAITyping(false);
+                    
+                    setCurrentScreen('chat');
+                }
+            })
+            .catch(err => {
+                console.error("failed to get session stats:", err);
+                setIsAITyping(false);
+                setCurrentScreen('upload');
+                alert("failed to resume session");
+            });
+    };
+    
+    const handleCreateNewSession = () => {
+        setShowSessionSelector(false);
+        setCurrentScreen('upload');
     };
     
     const addDropsFromChat = (n) => {
         if (isAnimatingDrop) return;
+        setDropsBeingAnimated(n);
+        //todo: potentially we should just do one drop per factoid, and there's no way to get multiple?
+        //this is awfully complicated
         
         const messagesContainer = messagesContainerRef.current;
         const cup = cupRef.current;
@@ -51,8 +193,14 @@ const LearnMode = ({ profile, onClose }) => {
             }
 
             if (!lastUserMessage) {
+                console.log("upd. direcrly:", n);
                 const newDropsValue = Math.min(currentDrops + n, maxDrops);
                 setCurrentDrops(newDropsValue);
+                
+                if (profile && profile.name && n > 0) {
+                    UpdateDrops(profile.name, newDropsValue)
+                        .catch(err => console.error("failed to update profile drops:", err));
+                }
                 return;
             }
             
@@ -210,44 +358,60 @@ const LearnMode = ({ profile, onClose }) => {
         
         const checkAllComplete = () => {
             if (completedDrops === totalDrops) {
-                const newDropsValue = Math.min(currentDrops + totalDrops, maxDrops);
-                setCurrentDrops(newDropsValue);
-                
-                setTriggerShake(prev => prev + 1);
-                
+                const dropsToAdd = totalDrops;
+                const beforeDrops = currentDrops;
+                //reset
                 setIsAnimatingDrop(false);
+                setDropsBeingAnimated(0);
+                
+                const newDropsValue = Math.min(beforeDrops + dropsToAdd, maxDrops);//pray
+                
+                console.log("Cup update - ANIMATION COMPLETE:", { 
+                    currentDropsBefore: beforeDrops,
+                    dropsToAdd: dropsToAdd,
+                    newDropsValue: newDropsValue,
+                    maxDrops: maxDrops,
+                    completedDrops: completedDrops,
+                    totalDrops: totalDrops
+                });
+                
+                setCurrentDrops(newDropsValue);
+                setTimeout(() => {
+                    setTriggerShake(prev => prev + 1);
+                    
+                    console.log("drops:", newDropsValue);
+                }, 10);
+                
+                if (profile && profile.name && dropsToAdd > 0) {
+                    UpdateDrops(profile.name, newDropsValue)
+                        .catch(err => console.error("failed to update profile drops:", err));
+                }
             }
         };
         
         dropletPaths.forEach(animateDroplet);
     };
     
-    const welcomeAnimationDone = useRef(false);
-    const messagesEndRef = useRef(null);
-    const inputRef = useRef(null);
-    const welcomeTextRef = useRef('');
-    const welcomeFullText = `Let's get Fluent in ${profile.name}.`;
-    const typingSpeedMs = 30;
-    const animationTimer = useRef(null);
-    const [welcomeSubtext, setWelcomeSubtext] = useState('');
-    const animationDuration = 5000;
-    const animationTimeoutRef = useRef(null);
-
     useEffect(() => {
         if (currentScreen === 'welcome' && !welcomeAnimationDone.current) {
-            let currentCharIndex = 0;
+            let currentIndex = 0;
+            welcomeTextRef.current = '';
             
             animationTimer.current = setInterval(() => {
-                if (currentCharIndex <= welcomeFullText.length) {
-                    welcomeTextRef.current = welcomeFullText.substring(0, currentCharIndex);
+                if (currentIndex < welcomeFullText.length) {
+                    welcomeTextRef.current += welcomeFullText[currentIndex];
                     setWelcomeSubtext(welcomeTextRef.current);
-                    currentCharIndex++;
+                    currentIndex++;
                 } else {
                     clearInterval(animationTimer.current);
                     welcomeAnimationDone.current = true;
                     
                     animationTimeoutRef.current = setTimeout(() => {
-                        setCurrentScreen('upload');
+                        if (availableSessions.length > 0) {
+                            setShowSessionSelector(true);
+                        } else {
+                            setCurrentScreen('upload');
+                        }
                     }, animationDuration);
                 }
             }, typingSpeedMs);
@@ -261,7 +425,7 @@ const LearnMode = ({ profile, onClose }) => {
                 clearTimeout(animationTimeoutRef.current);
             }
         };
-    }, [currentScreen]);
+    }, [currentScreen, availableSessions, welcomeFullText, animationDuration]);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -275,6 +439,7 @@ const LearnMode = ({ profile, onClose }) => {
                 welcomeAnimationDone.current = true;
                 setWelcomeSubtext(welcomeFullText);
                 setCurrentScreen('upload');
+                setShowSessionSelector(false);//thjis is needed to prevent esc errors
             }
         };
 
@@ -306,6 +471,16 @@ const LearnMode = ({ profile, onClose }) => {
         }
     }, [conversation, currentScreen]);
 
+    useEffect(() => {
+        if (sessionStats && sessionStats.factoids) {
+            setFactoids(sessionStats.factoids);
+            
+            if (sessionStats.total_factoids) {
+                setMaxDrops(sessionStats.total_factoids);
+            }
+        }
+    }, [sessionStats]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -313,47 +488,202 @@ const LearnMode = ({ profile, onClose }) => {
     const handleProcessText = () => {
         if (uploadText.trim() === '') return;
         
+        console.log("processing");
         setCurrentScreen('processing');
         
         const emptyConversation = [];
         const conversationJSON = JSON.stringify(emptyConversation);
         
+        const safetyTimeout = setTimeout(() => {
+            console.log("timeout");
+            setCurrentScreen('upload');
+            alert("timeout.");
+        }, 30000); //todo:30 seconds for now, change lateR? do this in go??
+        
+        let isTransitioning = false;//added a flag here becauase it broke soo many times
+        
         CreateLearnSession(profile.classUUID, uploadText, conversationJSON)
             .then(newSessionId => {
+                console.log("successful creation of session:", newSessionId);
                 setSessionId(newSessionId);
                 
-                setTimeout(() => {
-                    setCurrentScreen('chat');
-                    const initialConversation = [
-                        { role: 'ai', content: `I've analyzed the content you provided about ${profile.name}. I've extracted some key concepts that we can explore together.` },
-                        { role: 'ai', content: `Let's dive into what you'd like to learn. You can ask me specific questions about ${profile.name} or ask for an overview of the main topics.` }
-                    ];
+                RecordAIUploadHistory(profile.classUUID, uploadText)
+                    .catch(err => console.error("failed to record upload history:", err));
+                
+                let checkAttempts = 0;
+                const maxCheckAttempts = 15;//30 sec, 2 sec interval
+                
+                const checkForFactoids = () => {
+                    if (isTransitioning) return;
                     
-                    setConversation(initialConversation);
+                    checkAttempts++;
+                    console.log(`Checking for factoids (attempt ${checkAttempts}/${maxCheckAttempts})...`);
                     
-                    UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify(initialConversation))
-                        .catch(err => console.error("Failed to update chat history:", err));
-                    
-                }, 3000);
+                    GetSessionStatistics(profile.classUUID, newSessionId)
+                        .then(stats => {
+                            if (isTransitioning) return;
+                            
+                            if (stats && stats.factoids && stats.factoids.length > 0) {
+                                console.log("Factoids ready! Proceeding to chat screen.");
+                                
+                                isTransitioning = true;
+                                
+                                clearTimeout(safetyTimeout);
+                                setSessionStats(stats);
+                                setCurrentDrops(0);
+                                
+                                setLastKnownDropsAwarded(stats.drops_awarded || 0);
+                                
+                                setIsAITyping(true);
+                                
+                                const welcomeMessage = { 
+                                    role: 'ai', 
+                                    content: `welcome to your learning session on ${profile.name}. les get fluent` 
+                                };
+                                setConversation([welcomeMessage]);
+                                
+                                setCurrentScreen('chat');
+                                
+                                UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify([welcomeMessage]))
+                                    .catch(err => console.error("failed to update chat history:", err));
+                                
+                                StartSessionConversation(profile.classUUID)
+                                    .then(response => {
+                                        setIsAITyping(false);
+                                        
+                                        if (typeof response === 'string' && (response.trim().startsWith('<') || response.includes('<!DOCTYPE'))) {
+                                            console.error("received html instead of valid response from API:", response.substring(0, 100));
+                                            
+                                            const fallbackConversation = [
+                                                welcomeMessage,
+                                                { role: 'ai', content: `analyzed the content you provided about ${profile.name}. extracted some key concepts that we can explore together.` }
+                                            ];
+                                            setConversation(fallbackConversation);
+                                            
+                                            UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify(fallbackConversation))
+                                                .catch(err => console.error("Failed to update chat history with fallback:", err));
+                                            return;
+                                        }
+                                        
+                                        const initialConversation = [
+                                            welcomeMessage,
+                                            { role: 'ai', content: response }
+                                        ];
+                                        
+                                        setConversation(initialConversation);
+                                        
+                                        UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify(initialConversation))
+                                            .catch(err => console.error("Failed to update chat history:", err));
+                                    })
+                                    .catch(err => {
+                                        console.error("Failed to start conversation:", err);
+                                        setIsAITyping(false);
+                                    });
+                            } else if (checkAttempts < maxCheckAttempts) {
+                                setTimeout(checkForFactoids, 2000);
+                            } else {
+                                console.log("Max check attempts reached, proceeding with fallback...");
+                                isTransitioning = true;
+                                clearTimeout(safetyTimeout);
+                                
+                                setSessionStats(stats || { factoids: [], drops_awarded: 0 });
+                                setCurrentDrops(0);
+                                
+                                setIsAITyping(true);
+                                
+                                const fallbackMessage = { 
+                                    role: 'ai', 
+                                    content: `analyzing the content you provided about ${profile.name}. what topic would you like to explore first?` 
+                                };
+                                setConversation([fallbackMessage]);
+                                setCurrentScreen('chat');
+                                
+                                UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify([fallbackMessage]))
+                                    .catch(err => console.error("Failed to update chat history:", err));
+                                
+                                StartSessionConversation(profile.classUUID)
+                                    .then(response => {
+                                        setIsAITyping(false);
+                                        const initialConversation = [
+                                            fallbackMessage,
+                                            { role: 'ai', content: response }
+                                        ];
+                                        setConversation(initialConversation);
+                                        
+                                        UpdateSessionChatHistory(profile.classUUID, newSessionId, JSON.stringify(initialConversation))
+                                            .catch(err => console.error("Failed to update chat history:", err));
+                                    })
+                                    .catch(err => {
+                                        console.error("Failed to start conversation:", err);
+                                        setIsAITyping(false);
+                                    });
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Failed to get session statistics:", err);
+                            if (checkAttempts < maxCheckAttempts) {
+                                setTimeout(checkForFactoids, 2000);
+                            } else {
+                                clearTimeout(safetyTimeout);
+                                alert("Failed to process content. Please try again or use a different text.");
+                                setCurrentScreen('upload');
+                            }
+                        });
+                };
+                
+                checkForFactoids();
             })
             .catch(err => {
-                console.error("Failed to create learn session:", err);
-                
-                setTimeout(() => {
-                    setCurrentScreen('chat');
-                    setConversation([
-                        { role: 'ai', content: `I've analyzed the content you provided about ${profile.name}. I've extracted some key concepts that we can explore together.` },
-                        { role: 'ai', content: `Let's dive into what you'd like to learn. You can ask me specific questions about ${profile.name} or ask for an overview of the main topics.` }
-                    ]);
-                }, 3000);
+                console.error("failed to create session:", err);
+                clearTimeout(safetyTimeout);
+                alert("failed to create session. Please try again.");
             });
     };
 
     const handleSendMessage = () => {
-        if (message.trim() === '') return;
+        if (message.trim() === '' || isAITyping) return;
         
         const userMessage = { role: 'user', content: message };
         setConversation(prev => [...prev, userMessage]);
+        
+        const handleFactoidResponse = (factoidResponse, previousConversation, successCallback, errorCallback) => {
+            if (typeof factoidResponse === 'string' && 
+                (factoidResponse.trim().startsWith('<') || 
+                factoidResponse.includes('<!DOCTYPE'))) {
+                console.error("Received HTML instead of valid response from API:", 
+                             factoidResponse.substring(0, 100));
+                
+                const fallbackMessage = { 
+                    role: 'ai', 
+                    content: `great job! Let's move on to another concept about ${profile.name}. do you have any questions about this?` 
+                };
+                const nextConversation = [...previousConversation, fallbackMessage];
+                setConversation(nextConversation);
+                
+                setIsAITyping(false);
+                
+                if (sessionId) {
+                    UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(nextConversation))
+                        .catch(err => console.error("Failed to update chat history for fallback:", err));
+                }
+                
+                if (errorCallback) errorCallback(nextConversation);
+                return;
+            }
+            
+            const nextFactoidMessage = { role: 'ai', content: factoidResponse };
+            const nextConversation = [...previousConversation, nextFactoidMessage];
+            setConversation(nextConversation);
+            
+            setIsAITyping(false);
+            
+            if (sessionId) {
+                UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(nextConversation))
+                    .catch(err => console.error("failed to update chat history for next factoid:", err));
+            }
+            
+            if (successCallback) successCallback(nextConversation);
+        };
         
         const addDropsMatch = message.match(/^add drops (\d+)$/i);
         if (addDropsMatch) {
@@ -361,6 +691,8 @@ const LearnMode = ({ profile, onClose }) => {
             
             if (!isNaN(dropsToAdd) && dropsToAdd > 0) {
                 setMessage('');
+                
+                console.log("add drops command detected:", { dropsToAdd, currentDrops, maxDrops });
                 
                 const willExceedMax = currentDrops + dropsToAdd > maxDrops;
                 const actualDropsAdded = willExceedMax ? maxDrops - currentDrops : dropsToAdd;
@@ -382,12 +714,28 @@ const LearnMode = ({ profile, onClose }) => {
                 }
                 
                 setTimeout(() => {
-                    addDropsFromChat(actualDropsAdded);
+                    const beforeDrops = currentDrops;
+                    
+                    setCurrentDrops(finalDropCount);
+                    console.log("Manual drops update:", {
+                        before: beforeDrops,
+                        added: actualDropsAdded,
+                        after: finalDropCount
+                    });
+                    
+                    setTimeout(() => {
+                        setTriggerShake(prev => prev + 1);
+                    }, 50);
+                    
+                    if (profile && profile.name) {
+                        UpdateDrops(profile.name, finalDropCount)
+                            .catch(err => console.error("failed to update profile drops:", err));
+                    }
                     
                     let responseContent = `Added ${actualDropsAdded} ${profile.name} ${actualDropsAdded === 1 ? 'droplet' : 'droplets'}. `;
                     
                     if (willExceedMax) {
-                        responseContent += `(That's all that would fit! Cup is now full: ${finalDropCount}/${maxDrops})`;
+                        responseContent += `(Cup is now full: ${finalDropCount}/${maxDrops})`;
                     } else {
                         responseContent += `Current count: ${finalDropCount}/${maxDrops}`;
                     }
@@ -416,23 +764,147 @@ const LearnMode = ({ profile, onClose }) => {
             const updatedConversation = [...conversation, userMessage];
             UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
                 .catch(err => console.error("Failed to update chat history:", err));
-
         }
         
-        setTimeout(() => {
-            setIsAITyping(false);
-            const aiResponse = { 
-                role: 'ai', 
-                content: `I'm analyzing the content about ${profile.name}. This is a key concept we can explore: [Concept Example]. Would you like me to explain more about this concept or explore something else?`
-            };
-            const updatedConversation = [...conversation, userMessage, aiResponse];
-            setConversation(updatedConversation);
-            
-            if (sessionId) {
-                UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
-                    .catch(err => console.error("Failed to update chat history:", err));
-            }
-        }, 1500);
+        ProcessUserMessage(profile.classUUID, message)
+            .then(response => {
+                setIsAITyping(false);
+                
+                const { content, outcome, dropsAwarded } = response;
+                
+                const aiResponse = { role: 'ai', content: content };
+                const updatedConversation = [...conversation, userMessage, aiResponse];
+                setConversation(updatedConversation);
+                
+                if (sessionId) {
+                    UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
+                        .catch(err => console.error("failed to update chat history:", err));
+                }
+                
+                if (dropsAwarded > lastKnownDropsAwarded) {
+                    const newDropsAwarded = dropsAwarded - lastKnownDropsAwarded;
+                    
+                    console.log("New drops awarded:", {
+                        previous: lastKnownDropsAwarded,
+                        current: dropsAwarded,
+                        added: newDropsAwarded,
+                        currentDrops: currentDrops
+                    });
+                    
+                    setLastKnownDropsAwarded(dropsAwarded);
+                    
+                    setTimeout(() => {
+                        setDropsBeingAnimated(newDropsAwarded);
+                        
+                        console.log("Starting drops animation:", {
+                            before: currentDrops,
+                            adding: newDropsAwarded,
+                            expected: Math.min(currentDrops + newDropsAwarded, maxDrops)
+                        });
+                        
+                        addDropsFromChat(newDropsAwarded);
+                    }, 800);
+                }
+                
+                if (outcome === 'success') {
+                    let transitionDelay = 3000; // Default 3s delay
+                    
+                    const quickMasteryIndicators = [
+                        "correct", "that's right", "well done", "good job", "excellent", 
+                        "perfectly", "exactly", "you got it right", "you're right", "great job"
+                    ];
+                    
+                    const isQuickMastery = quickMasteryIndicators.some(
+                        indicator => content.toLowerCase().includes(indicator)
+                    );
+                    
+                    if (content.length < 150 || isQuickMastery) {
+                        transitionDelay = 1500; // proficient users
+                        console.log("using shorter transition delay due to quick mastery detection");
+                    }
+                    
+                    setTimeout(() => {
+                        setIsAITyping(true);
+                        
+                        StartSessionConversation(profile.classUUID)
+                            .then(nextFactoidResponse => {
+                                handleFactoidResponse(nextFactoidResponse, updatedConversation);
+                            })
+                            .catch(err => {
+                                console.error("Failed to start conversation for next factoid:", err);
+                                setIsAITyping(false);
+                                
+                                const fallbackMessage = { 
+                                    role: 'ai', 
+                                    content: `Great job! Let's move on to another concept about ${profile.name}. What would you like to learn about next?` 
+                                };
+                                const nextConversation = [...updatedConversation, fallbackMessage];
+                                setConversation(nextConversation);
+                                
+                                if (sessionId) {
+                                    UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(nextConversation))
+                                        .catch(e => console.error("Failed to update chat history with fallback:", e));
+                                }
+                            });
+                    }, transitionDelay);
+                } else if (outcome === 'postpone') {
+                    setIsPostponeResponsePending(true);
+                } else if (isPostponeResponsePending) {
+                    setIsPostponeResponsePending(false);
+                    
+                    setTimeout(() => {
+                        setIsAITyping(true);
+                        
+                        StartSessionConversation(profile.classUUID)
+                            .then(nextFactoidResponse => {
+                                handleFactoidResponse(nextFactoidResponse, updatedConversation);
+                            })
+                            .catch(err => {
+                                console.error("Failed to start conversation for next factoid:", err);
+                                setIsAITyping(false);
+                                
+                                const fallbackMessage = { 
+                                    role: 'ai', 
+                                    content: `nice job! Let's move on to another concept about ${profile.name}. What would you like to learn about next?` 
+                                };
+                                const nextConversation = [...updatedConversation, fallbackMessage];
+                                setConversation(nextConversation);
+                                
+                                if (sessionId) {
+                                    UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(nextConversation))
+                                        .catch(e => console.error("Failed to update chat history with fallback:", e));
+                                }
+                            });
+                    }, 1500); // 1.5 second delay
+                }
+                
+                if (sessionId) {
+                    GetSessionStatistics(profile.classUUID, sessionId)
+                        .then(stats => {
+                            setSessionStats(stats);
+                            if (stats.drops_awarded !== undefined) {
+                                setLastKnownDropsAwarded(stats.drops_awarded);
+                            }
+                        })
+                        .catch(err => console.error("Failed to get session statistics:", err));
+                }
+            })
+            .catch(err => {
+                console.error("Failed to process message:", err);
+                
+                setIsAITyping(false);
+                const aiResponse = { 
+                    role: 'ai', 
+                    content: `Please try again.`
+                };
+                const updatedConversation = [...conversation, userMessage, aiResponse];
+                setConversation(updatedConversation);
+                
+                if (sessionId) {
+                    UpdateSessionChatHistory(profile.classUUID, sessionId, JSON.stringify(updatedConversation))
+                        .catch(err => console.error("Failed to update chat history:", err));
+                }
+            });
     };
 
     const handleKeyPress = (e) => {
@@ -445,7 +917,6 @@ const LearnMode = ({ profile, onClose }) => {
         }
     };
 
-    //redirected to the droplet explorer modal
     const handleEditDropletsClick = () => {
         setShowDropletExplorer(true);
         document.body.style.overflow = 'hidden';
@@ -503,6 +974,7 @@ const LearnMode = ({ profile, onClose }) => {
                         <div className="processing-content">
                             <img src={pourLoadGif} alt="Processing" className="pour-load-animation" />
                             <h2 className="processing-title">Processing...</h2>
+                            <p className="processing-subtitle">Extracting key concepts and generating learning material</p>
                         </div>
                     </div>
                 );
@@ -554,12 +1026,12 @@ const LearnMode = ({ profile, onClose }) => {
                         <div className="chat-sidebar">
                             <div className="cup-container">
                                 <div ref={cupRef}>
-                                <SimpleCup 
-                                    currentDrops={currentDrops} 
-                                    maxDrops={maxDrops} 
-                                    onClick={handleCupClick} 
+                                    <SimpleCup 
+                                        currentDrops={currentDrops} 
+                                        maxDrops={maxDrops} 
+                                        onClick={handleCupClick} 
                                         triggerShake={triggerShake}
-                                />
+                                    />
                                 </div>
                                 <div className="cup-info">
                                     <span className="droplet-count">{profile.name} Droplets: {currentDrops}/{maxDrops}</span>
@@ -568,18 +1040,31 @@ const LearnMode = ({ profile, onClose }) => {
                             <div className="factoid-container">
                                 <h3>Learning Progress</h3>
                                 <div className="factoid-list">
-                                    <div className="factoid-item">
-                                        <span className="factoid-bullet">•</span>
-                                        <p>concept</p>
-                                    </div>
-                                    <div className="factoid-item">
-                                        <span className="factoid-bullet">•</span>
-                                        <p>concept</p>
-                                    </div>
-                                    <div className="factoid-item">
-                                        <span className="factoid-bullet">•</span>
-                                        <p>concept</p>
-                                    </div>
+                                    {sessionStats && sessionStats.completed_factoids > 0 ? (
+                                        <div className="factoid-progress">
+                                            <div className="progress-bar">
+                                                <div 
+                                                    className="progress-fill" 
+                                                    style={{
+                                                        width: `${(sessionStats.completed_factoids / sessionStats.total_factoids) * 100}%`
+                                                    }}
+                                                ></div>
+                                            </div>
+                                            <div className="progress-text">
+                                                {sessionStats.completed_factoids} / {sessionStats.total_factoids} concepts
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="no-factoids">Start chatting to learn concepts!</p>
+                                    )}
+                                    
+                                    {}
+                                    {factoids && factoids.slice(0, 5).map((factoid, index) => (
+                                        <div key={index} className="factoid-item">
+                                            <span className="factoid-bullet">•</span>
+                                            <p>{factoid.question || factoid.concept || "concept"}</p>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -610,14 +1095,22 @@ const LearnMode = ({ profile, onClose }) => {
         }
     };
 
+    const handleBackClick = () => {
+        setIsIntentionalClose(true);
+        setTimeout(() => {
+            onClose();
+        }, 100);
+    };
+
     useEffect(() => {
         return () => {
-            if (sessionId) {
+            if (sessionId && (isIntentionalClose || currentScreen === 'chat')) {
+                console.log("ending session on component unmount:", sessionId);
                 EndSession(profile.classUUID, sessionId)
-                    .catch(err => console.error("Failed to end session:", err));
+                    .catch(err => console.error("failed to end session:", err));
             }
         };
-    }, [sessionId, profile.classUUID]);
+    }, [sessionId, profile.classUUID, isIntentionalClose, currentScreen]);
 
     return (
         <div className={`learn-mode-window ${currentScreen === 'welcome' ? 'fullscreen' : ''}`}>
@@ -625,7 +1118,7 @@ const LearnMode = ({ profile, onClose }) => {
                 <>
                     <div id="titlebar"></div>
                     <div className="learn-mode-header">
-                        <button className="back-button-learn" onClick={onClose}>
+                        <button className="back-button-learn" onClick={handleBackClick}>
                             <i className="ri-arrow-left-line"></i>
                         </button>
                         {currentScreen === 'upload' ? (
@@ -649,6 +1142,7 @@ const LearnMode = ({ profile, onClose }) => {
                 <DropletExplorerModal 
                     profile={profile} 
                     onClose={handleDropletExplorerClose} 
+                    onSessionResumed={handleSessionResume}
                 />
             )}
         </div>

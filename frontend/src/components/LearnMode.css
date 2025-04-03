@@ -425,8 +425,14 @@ body {
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding-right: 10px;
-    margin-bottom: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 .message {
@@ -457,7 +463,12 @@ body {
 }
 
 .message-content {
-    line-height: 1.5;
+    white-space: pre-wrap;
+    margin-top: 5px;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 .typing-indicator {
@@ -589,6 +600,25 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+    scrollbar-width: thin;
+}
+
+.factoid-list::-webkit-scrollbar {
+    width: 5px;
+}
+
+.factoid-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+.factoid-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
 }
 
 .factoid-item {
@@ -598,16 +628,21 @@ body {
 }
 
 .factoid-bullet {
-    color: #6ee8f8;
-    font-size: 1.5rem;
-    line-height: 1;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.2rem;
+    line-height: 1.4;
 }
 
 .factoid-item p {
-    color: rgba(255, 255, 255, 0.8);
     margin: 0;
-    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
     line-height: 1.4;
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 
 @keyframes fadeIn {
@@ -617,4 +652,157 @@ body {
     to {
         opacity: 1;
     }
+}
+
+.session-selector-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.session-selector-modal {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    width: 500px;
+    max-width: 90vw;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.session-selector-modal h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+}
+
+.session-selector-modal p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.session-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+}
+
+.session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.session-item:hover {
+    background-color: #f5f5f5;
+}
+
+.session-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.session-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.session-date {
+    font-size: 0.8rem;
+    color: #777;
+    margin-top: 4px;
+}
+
+.session-resume-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.session-resume-btn:hover {
+    background-color: #3e8e41;
+}
+
+.session-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.new-session-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.new-session-btn:hover {
+    background-color: #0b7dda;
+}
+
+.processing-subtitle {
+    color: #777;
+    margin-top: 10px;
+    animation: fade-in 1s ease-in-out;
+}
+
+.factoid-progress {
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.progress-bar {
+    height: 10px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #4CAF50;
+    border-radius: 5px;
+    transition: width 0.5s ease-in-out;
+}
+
+.progress-text {
+    font-size: 0.8rem;
+    color: #666;
+    text-align: right;
+}
+
+.no-factoids {
+    color: #888;
+    font-style: italic;
+    margin: 20px 0;
+    text-align: center;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }

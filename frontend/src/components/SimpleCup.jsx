@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import './SimpleCup.css';
 
-const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
+const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick, triggerShake }) => {
     const canvasRef = useRef(null);
     const [isGolden, setIsGolden] = useState(false);
     const [ripples, setRipples] = useState([]);
@@ -23,8 +23,11 @@ const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
         ctx.scale(dpr, dpr);
 
         const drawShimmeringWater = (ctx, x, y, width, height) => {
+            const safeHeight = Math.max(0, height);
+            if (safeHeight <= 0) return;
+
             const time = Date.now() / 1000;
-            const gradient = ctx.createLinearGradient(x, y + height, x + width, y);
+            const gradient = ctx.createLinearGradient(x, y + safeHeight, x + width, y);
             const colors = [
                 getComputedStyle(document.documentElement).getPropertyValue('--gradient-color-1').trim(),
                 getComputedStyle(document.documentElement).getPropertyValue('--gradient-color-2').trim(),
@@ -43,12 +46,12 @@ const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
             }
 
             ctx.fillStyle = gradient;
-            if (width > 0 && height > 0) {
-                ctx.fillRect(x, y, width, height);
+            if (width > 0 && safeHeight > 0) {
+                ctx.fillRect(x, y, width, safeHeight);
             }
 
             ctx.beginPath();
-            ctx.moveTo(x, y + height);
+            ctx.moveTo(x, y + safeHeight);
             ctx.lineTo(x, y);
             
             for (let i = 0; i <= width; i++) {
@@ -119,14 +122,14 @@ const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
                     }
                 }
                 
-                const maxOffset = height * 0.15;
+                const maxOffset = safeHeight * 0.15;
                 totalOffset = maxOffset * Math.tanh(totalOffset / maxOffset);
                 
                 ctx.lineTo(x + i, baseY + totalOffset);
             }
             
-            ctx.lineTo(x + width, y + height);
-            ctx.lineTo(x, y + height);
+            ctx.lineTo(x + width, y + safeHeight);
+            ctx.lineTo(x, y + safeHeight);
             
             ctx.fillStyle = gradient;
             ctx.fill();
@@ -140,13 +143,13 @@ const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
             const glowGradient = ctx.createRadialGradient(
-                x + width / 2, y + height / 2, 0,
-                x + width / 2, y + height / 2, width / 2
+                x + width / 2, y + safeHeight / 2, 0,
+                x + width / 2, y + safeHeight / 2, width / 2
             );
             glowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
             glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             ctx.fillStyle = glowGradient;
-            ctx.fillRect(x, y, width, height);
+            ctx.fillRect(x, y, width, safeHeight);
             ctx.restore();
         };
 
@@ -233,6 +236,12 @@ const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
         };
     }, [currentDrops, maxDrops, isGolden, ripples, isShaking]);
 
+    useEffect(() => {
+        if (triggerShake) {
+            shake();
+        }
+    }, [triggerShake]);
+
     const shake = () => {
         if (!isShaking) {
             setIsShaking(true);
@@ -262,7 +271,7 @@ const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
                 clearInterval(rippleInterval);
             }, 700);
             
-            if (onClick) {
+            if (onClick && !triggerShake) {
                 onClick();
             }
         }
@@ -310,6 +319,32 @@ const SimpleCup = ({ currentDrops = 30, maxDrops = 50, onClick }) => {
             c1.a + (c2.a - c1.a) * amount
         })`;
     };
+
+    useEffect(() => {
+        console.log(`new drops: ${currentDrops}/${maxDrops}`);
+        
+        if (canvasRef.current) {
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const cupWidth = 100;
+            const cupHeight = 120;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const waterHeight = 70 * (currentDrops / maxDrops);
+            console.log("cup redraw. new heiht:", waterHeight);
+            
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = requestAnimationFrame(() => {
+                    if (!isShaking) {
+                        shake();
+                    }
+                });
+            }
+        }
+    }, [currentDrops]);
 
     return (
         <div className="simple-cup-wrapper" onClick={shake}>

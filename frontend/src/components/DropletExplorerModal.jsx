@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import './Modal.css';
 import './DropletExplorerModal.css';
-import { GetDatabaseExplorerData } from '../../wailsjs/go/main/App';
+import { GetDatabaseExplorerData, ResumeSession, GetSessionStatistics } from '../../wailsjs/go/main/App';
 
-const DropletExplorerModal = ({ onClose, profile }) => {
+const DropletExplorerModal = ({ onClose, profile, onSessionResumed }) => {
     const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState('overview');
     const [selectedEntity, setSelectedEntity] = useState(null);
@@ -14,6 +14,7 @@ const DropletExplorerModal = ({ onClose, profile }) => {
         aiHistory: {
             uploads: [],
             chats: [],
+            extractor: [],
             parser: []
         }
     });
@@ -27,9 +28,18 @@ const DropletExplorerModal = ({ onClose, profile }) => {
         
         loadDatabaseData();
         
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        
+        document.addEventListener('keydown', handleKeyDown);
+        
         document.body.style.overflow = 'hidden';
         
         return () => {
+            document.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = '';
         };
     }, [profile]);
@@ -39,24 +49,33 @@ const DropletExplorerModal = ({ onClose, profile }) => {
         setError(null);
         
         try {
+            const timestamp = new Date().getTime();
+            console.log(`loading database explorer data at ${timestamp}...`);
             const data = await GetDatabaseExplorerData(profile.classUUID);
+            
+            console.log('loaded database explorer data:', data);
             
             const safeData = {
                 ...data,
                 aiHistory: {
                     uploads: data.aiHistory?.uploads || [],
                     chats: data.aiHistory?.chats || [],
+                    extractor: data.aiHistory?.parser || [],
                     parser: data.aiHistory?.parser || []
                 }
             };
             
             setDbData(safeData);
         } catch (err) {
-            console.error('err loading database data:', err);
+            console.error('error loading database data:', err);
             setError(`failed to load database data: ${err.message || 'unknown error'}`);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleRefreshData = () => {
+        loadDatabaseData();
     };
 
     const handleSectionChange = (section) => {
@@ -74,9 +93,28 @@ const DropletExplorerModal = ({ onClose, profile }) => {
         if (type === 'session') {
             setExpandedSession(entity.id);
             setSecondaryView(null);
+            
+            setLoading(true);
+            GetSessionStatistics(profile.classUUID, entity.id)
+                .then(sessionStats => {
+                    if (sessionStats && sessionStats.chat_history) {
+                        setSelectedEntity(prev => ({
+                            ...prev,
+                            data: {
+                                ...prev.data,
+                                chat_history: sessionStats.chat_history
+                            }
+                        }));
+                    }
+                    setLoading(false);
+                })
+                .catch(err => {
+                    console.error("failed to get session chat history:", err);
+                    setLoading(false);
+                });
         } else if (type === 'ai-entry') {
             const parentType = prevType || 'uploads';
-            if (['uploads', 'chats', 'parser'].includes(parentType)) {
+            if (['uploads', 'chats', 'extractor'].includes(parentType)) {
                 const entries = dbData.aiHistory[parentType] || [];
                 setSelectedEntity({
                     data: entity,
@@ -102,12 +140,12 @@ const DropletExplorerModal = ({ onClose, profile }) => {
         if (entityType === 'session') {
             const uploads = dbData.aiHistory?.uploads?.filter(entry => entry?.session_id === entityId) || [];
             const chats = dbData.aiHistory?.chats?.filter(entry => entry?.session_id === entityId) || [];
-            const parser = dbData.aiHistory?.parser?.filter(entry => entry?.session_id === entityId) || [];
+            const extractor = dbData.aiHistory?.extractor?.filter(entry => entry?.session_id === entityId) || [];
             
-            return { uploads, chats, parser };
+            return { uploads, chats, extractor };
         }
         
-        return { uploads: [], chats: [], parser: [] };
+        return { uploads: [], chats: [], extractor: [] };
     };
 
     const formatTimestamp = (timestamp) => {
@@ -125,13 +163,55 @@ const DropletExplorerModal = ({ onClose, profile }) => {
                 chatHistory = JSON.parse(chatHistoryJson);
             }
             
-            return Array.isArray(chatHistory) ? chatHistory.map((msg, index) => (
-                <div key={index} className={`chat-message ${msg.role}`}>
-                    <div className="message-header">{msg.role === 'user' ? '👤 You' : '🤖 Fluent'}</div>
-                    <div className="message-content">{msg.content}</div>
-                </div>
-            )) : <div className="error">Invalid chat history format</div>;
+            if (Array.isArray(chatHistory)) {
+                if (chatHistory.length > 0 && 'role' in chatHistory[0] && 'content' in chatHistory[0]) {
+                    return (
+                        <div className="chat-messages-container">
+                            {chatHistory.map((msg, index) => (
+                                <div key={index} className={`chat-message ${msg.role}`}>
+                                    <div className="message-header">
+                                        {msg.role === 'user' ? '👤 You' : '🤖 Fluent'}
+                                        {msg.timestamp && <span className="message-time">{new Date(msg.timestamp).toLocaleTimeString()}</span>}
+                                    </div>
+                                    <div className="message-content">{msg.content}</div>
+                                </div>
+                            ))}
+                        </div>
+                    );
+                }
+                
+                return (
+                    <div className="chat-messages-container">
+                        {chatHistory.map((exchange, index) => {
+                            if (exchange.user_message && exchange.system_message) {
+                                return (
+                                    <React.Fragment key={index}>
+                                        <div className="chat-message user">
+                                            <div className="message-header">
+                                                👤 You
+                                                {exchange.timestamp && <span className="message-time">{new Date(exchange.timestamp).toLocaleTimeString()}</span>}
+                                            </div>
+                                            <div className="message-content">{exchange.user_message}</div>
+                                        </div>
+                                        <div className="chat-message ai">
+                                            <div className="message-header">
+                                                🤖 Fluent
+                                                {exchange.timestamp && <span className="message-time">{new Date(exchange.timestamp).toLocaleTimeString()}</span>}
+                                            </div>
+                                            <div className="message-content">{exchange.system_message}</div>
+                                        </div>
+                                    </React.Fragment>
+                                );
+                            }
+                            return null;
+                        })}
+                    </div>
+                );
+            }
+            
+            return <div className="error">Invalid chat history format</div>;
         } catch (e) {
+            console.error("Error parsing chat history:", e, chatHistoryJson);
             return <div className="error">Error parsing chat history: {e.message}</div>;
         }
     };
@@ -144,6 +224,26 @@ const DropletExplorerModal = ({ onClose, profile }) => {
         if (value === undefined || value === null) return 'Unknown';
         const str = String(value);
         return str.substring(start, end) + '...';
+    };
+
+    const handleResumeSession = async (sessionId) => {
+        if (!sessionId) return;
+        
+        try {
+            setLoading(true);
+            await ResumeSession(profile.classUUID, sessionId);
+            
+            if (onSessionResumed) {
+                onSessionResumed(sessionId);
+            } else {
+                onClose();
+            }
+        } catch (err) {
+            console.error("failed to resume session:", err);
+            setError(`failed to resume session: ${err.message || 'unknown error'}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const renderOverviewSection = () => {
@@ -162,7 +262,7 @@ const DropletExplorerModal = ({ onClose, profile }) => {
         const sessionCount = dbData.sessions?.length || 0;
         const uploadCount = dbData.aiHistory?.uploads?.length || 0;
         const chatCount = dbData.aiHistory?.chats?.length || 0;
-        const parserCount = dbData.aiHistory?.parser?.length || 0;
+        const extractorCount = dbData.aiHistory?.extractor?.length || 0;
 
         return (
             <div className="overview-section">
@@ -208,8 +308,8 @@ const DropletExplorerModal = ({ onClose, profile }) => {
                         
                         <div className="stat-card" onClick={() => handleSectionChange('ai-history')}>
                             <div className="stat-icon"><i className="ri-code-line"></i></div>
-                            <div className="stat-number">{parserCount}</div>
-                            <div className="stat-label">Parser Calls</div>
+                            <div className="stat-number">{extractorCount}</div>
+                            <div className="stat-label">Extractor Calls</div>
                         </div>
                     </div>
                 </div>
@@ -278,12 +378,28 @@ const DropletExplorerModal = ({ onClose, profile }) => {
                                         {selectedEntity.data.end_timestamp ? formatTimestamp(selectedEntity.data.end_timestamp) : 'In progress'}
                                     </span>
                                 </div>
+                                <div className="info-row">
+                                    <span className="info-label">Status:</span>
+                                    <span className="info-value">
+                                        {selectedEntity.data.status || 'Unknown'}
+                                    </span>
+                                </div>
                                 {selectedEntity.data.droplet_count && (
                                     <div className="info-row">
                                         <span className="info-label">Droplets:</span>
                                         <span className="info-value">{selectedEntity.data.droplet_count}</span>
                                     </div>
                                 )}
+                            </div>
+                            
+                            <div className="session-actions">
+                                <button 
+                                    className="resume-session-btn" 
+                                    onClick={() => handleResumeSession(selectedEntity.data.id)}
+                                    disabled={loading || selectedEntity.data.status === 'active'}
+                                >
+                                    {loading ? 'Loading...' : 'Resume Session'}
+                                </button>
                             </div>
                         </div>
                         
@@ -346,12 +462,12 @@ const DropletExplorerModal = ({ onClose, profile }) => {
             return <div className="error-message">{error}</div>;
         }
 
-        const aiHistory = dbData.aiHistory || { uploads: [], chats: [], parser: [] };
+        const aiHistory = dbData.aiHistory || { uploads: [], chats: [], extractor: [] };
         
         const aiTypes = [
             { key: 'uploads', label: 'Uploads', data: aiHistory.uploads || [], icon: 'ri-upload-2-line' },
             { key: 'chats', label: 'Chats', data: aiHistory.chats || [], icon: 'ri-message-3-line' },
-            { key: 'parser', label: 'Parser', data: aiHistory.parser || [], icon: 'ri-code-line' }
+            { key: 'extractor', label: 'Extractor', data: aiHistory.extractor || [], icon: 'ri-code-line' }
         ];
         
         const parentType = selectedEntity?.parentType || selectedEntity?.type || 'uploads';
@@ -515,9 +631,14 @@ const DropletExplorerModal = ({ onClose, profile }) => {
                         <i className="ri-api-line"></i> {
                             getRelatedEntities(session.id, 'session').uploads.length + 
                             getRelatedEntities(session.id, 'session').chats.length + 
-                            getRelatedEntities(session.id, 'session').parser.length
+                            getRelatedEntities(session.id, 'session').extractor.length
                         }
                     </div>
+                    {session.status && (
+                        <div className={`entity-status ${session.status}`}>
+                            {session.status}
+                        </div>
+                    )}
                 </div>
             </div>
         ));
@@ -588,6 +709,9 @@ const DropletExplorerModal = ({ onClose, profile }) => {
                             {profile.name} Database Explorer
                         </div>
                         <div className="header-actions">
+                            <button className="refresh-button" onClick={handleRefreshData} title="Refresh data">
+                                <i className="ri-refresh-line"></i>
+                            </button>
                             <button className="sidebar-toggle" onClick={toggleSidebar}>
                                 <i className={`ri-${sidebarVisible ? 'menu-fold-line' : 'menu-unfold-line'}`}></i>
                             </button>
@@ -640,7 +764,7 @@ const DropletExplorerModal = ({ onClose, profile }) => {
                                                 {[
                                                     { key: 'uploads', label: 'Uploads', icon: 'ri-upload-2-line' },
                                                     { key: 'chats', label: 'Chats', icon: 'ri-message-3-line' },
-                                                    { key: 'parser', label: 'Parser', icon: 'ri-code-line' }
+                                                    { key: 'extractor', label: 'Extractor', icon: 'ri-code-line' }//bam boom extractor
                                                 ].map(type => (
                                                     <button 
                                                         key={type.key}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"fluent/backend/db"
 	"fluent/backend/openai"
 
 	gopenai "github.com/sashabaranov/go-openai"
@@ -23,7 +24,7 @@ func NewExtractor(client *openai.OpenAIClient) *Extractor {
 	}
 }
 
-func (e *Extractor) ProcessTextToFactoids(ctx context.Context, text string) ([]openai.Factoid, error) {
+func (e *Extractor) ProcessTextToFactoids(ctx context.Context, text string, classUUID string, sessionID string) ([]openai.Factoid, error) {
 	promptsDir := openai.DeterminePromptsPath()
 	promptPath := filepath.Join(promptsDir, "factoid_extraction.txt")
 
@@ -57,6 +58,17 @@ func (e *Extractor) ProcessTextToFactoids(ctx context.Context, text string) ([]o
 	responseContent := resp.Choices[0].Message.Content
 	log.Printf("Raw response from OpenAI: %s", responseContent)
 
+	if classUUID != "" && sessionID != "" {
+		err = db.RecordAIParserHistory(classUUID, sessionID, systemPrompt, responseContent, resp.Usage.TotalTokens, calculateCost(resp.Usage))
+		if err != nil {
+			log.Printf("warning: failed to record extractor API call in history: %v", err)
+		} else {
+			log.Printf("successfully recorded extractor API call for session %s", sessionID)
+		}
+	} else {
+		log.Printf("warning: cannot record extractor API call in history: missing classUUID or sessionID")
+	}
+
 	factoids, err := parseFactoidsFromResponse(responseContent)
 	if err != nil {
 		return nil, err
@@ -67,6 +79,10 @@ func (e *Extractor) ProcessTextToFactoids(ctx context.Context, text string) ([]o
 
 	return factoids, nil
 }
+
+func calculateCost(usage gopenai.Usage) float64 {
+	return float64(usage.TotalTokens) * 0.000001
+}//åaaaaaaaaaaaaaaaaaahahhhhhhhhhhhh
 
 // there are various formats that the API response can take, so we try each one until we find one that works
 func parseFactoidsFromResponse(responseContent string) ([]openai.Factoid, error) {
@@ -80,9 +96,10 @@ func parseFactoidsFromResponse(responseContent string) ([]openai.Factoid, error)
 		{"response field", parseAsResponse},
 		{"output field", parseAsOutput},
 		{"result field", parseAsResult},
+		{"data field", parseAsData},
 		{"single factoid", parseAsSingle},
 	}
-	
+
 	var errors []string
 	for _, format := range formats {
 		factoids, err := format.parser(responseContent)
@@ -171,10 +188,21 @@ func parseAsSingle(content string) ([]openai.Factoid, error) {
 	return []openai.Factoid{factoid}, nil
 }
 
+func parseAsData(content string) ([]openai.Factoid, error) {
+	var response struct {
+		Data []openai.Factoid `json:"data"`
+	}
+	err := json.Unmarshal([]byte(content), &response)
+	if err != nil || len(response.Data) == 0 {
+		return nil, err
+	}
+	return response.Data, nil
+}
+
 func applyDefaultDifficulty(factoids []openai.Factoid) {
 	for i := range factoids {
 		if factoids[i].Difficulty == 0 {
-			factoids[i].Difficulty = 3//default middle difficulty
+			factoids[i].Difficulty = 3 //default middle difficulty
 		}
 	}
 }

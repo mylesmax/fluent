@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"fluent/backend/db"
@@ -15,51 +16,35 @@ func (cm *ChatMaster) SaveFactoidsToSession(factoids []db.FactoidData, classUUID
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	session, exists := cm.activeSessions[classUUID]
+	sessionID := fmt.Sprintf("session_%d", time.Now().UnixNano())
 
-	if !exists || session.Status != "active" {
-		sessionID := fmt.Sprintf("session_%d", time.Now().UnixNano())
-
-		session = &ChatSession{
-			ID:           sessionID,
-			ClassUUID:    classUUID,
-			CreatedAt:    time.Now(),
-			LastActivity: time.Now(),
-			FactoidQueue: make([]string, 0, len(factoids)),
-			Status:       "active",
-		}
-		
-		for _, f := range factoids {
-			session.FactoidQueue = append(session.FactoidQueue, f.ID)
-		}
-
-		if len(session.FactoidQueue) > 0 {
-			session.CurrentFactoid = session.FactoidQueue[0]
-			session.FactoidQueue = session.FactoidQueue[1:]
-		} else {
-			session.Status = "completed"
-		}
-		
-		cm.activeSessions[classUUID] = session
-		//ppppppppppersist
-		if err := cm.persistSession(session); err != nil {
-			return nil, err
-		}
-
-		return session, nil
+	session := &ChatSession{
+		ID:                         sessionID,
+		ClassUUID:                  classUUID,
+		CreatedAt:                  time.Now(),
+		LastActivity:               time.Now(),
+		FactoidQueue:               make([]string, 0, len(factoids)),
+		Status:                     "active",
+		DropsAwarded:               0,
+		ExchangesForCurrentFactoid: 0,
+		UserProficiencyLevel:       "beginner",
 	}
 
 	for _, f := range factoids {
 		session.FactoidQueue = append(session.FactoidQueue, f.ID)
 	}
 
-	if session.CurrentFactoid == "" && len(session.FactoidQueue) > 0 {
+	if len(session.FactoidQueue) > 0 {
 		session.CurrentFactoid = session.FactoidQueue[0]
 		session.FactoidQueue = session.FactoidQueue[1:]
+	} else {
+		session.Status = "completed"
 	}
 
+	cm.activeSessions[sessionID] = session
+
 	if err := cm.persistSession(session); err != nil {
-		return nil, fmt.Errorf("failed to persist session: %v", err)
+		return nil, err
 	}
 
 	return session, nil
@@ -82,9 +67,9 @@ func (cm *ChatMaster) ListSessions(classUUID string) ([]string, error) {
 	}
 
 	var sessionIDs []string
-	prefix := classUUID + "_"
+	prefix := classUUID + "_session_"
 	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".json" && len(file.Name()) > len(prefix) && file.Name()[:len(prefix)] == prefix {
+		if filepath.Ext(file.Name()) == ".json" && len(file.Name()) > len(prefix) && strings.HasPrefix(file.Name(), prefix) {
 			sessionID := file.Name()[len(prefix) : len(file.Name())-5]
 			sessionIDs = append(sessionIDs, sessionID)
 		}
@@ -206,7 +191,7 @@ func (cm *ChatMaster) ListSessionsByActivity(classUUID string) ([]string, error)
 			LastActivity: session.LastActivity,
 		})
 	}
-	
+
 	sort.Slice(sessions, func(i, j int) bool {
 		return sessions[i].LastActivity.After(sessions[j].LastActivity)
 	})
@@ -220,18 +205,33 @@ func (cm *ChatMaster) ListSessionsByActivity(classUUID string) ([]string, error)
 }
 
 func (cm *ChatMaster) PauseSession(classUUID string) error {
+	sessions, err := cm.ListSessionsByActivity(classUUID)
+	if err != nil || len(sessions) == 0 {
+		return fmt.Errorf("no sessions found for class %s", classUUID)
+	}
+
+	sessionID := sessions[0]
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	session, exists := cm.activeSessions[classUUID]
-	if !exists || session.Status != "active" {
-		return fmt.Errorf("no active session for class %s", classUUID)
+	session, exists := cm.activeSessions[sessionID]
+	if !exists {
+		var err error
+		session, err = cm.GetSession(classUUID, sessionID)
+		if err != nil {
+			return fmt.Errorf("failed to get session: %v", err)
+		}
+	}
+
+	if session.Status != "active" {
+		return fmt.Errorf("session is not active: %s", sessionID)
 	}
 
 	session.Status = "paused"
 	if err := cm.persistSession(session); err != nil {
 		return fmt.Errorf("failed to persist session: %v", err)
 	}
+	delete(cm.activeSessions, sessionID)
 
 	return nil
 }
@@ -242,15 +242,22 @@ func (cm *ChatMaster) ResumeSession(classUUID, sessionID string) error {
 		return err
 	}
 
-	if session.Status != "paused" {
-		return fmt.Errorf("session is not paused: %s", sessionID)
+	if session.Status != "paused" && session.Status != "inactive" {
+		if session.Status == "active" {
+			return nil
+		}
+		if session.Status == "completed" {
+			return fmt.Errorf("cannot resume completed session: %s", sessionID)
+		}
 	}
 
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
 	session.Status = "active"
-	cm.activeSessions[classUUID] = session
+	session.LastActivity = time.Now()
+
+	cm.activeSessions[sessionID] = session
 
 	if err := cm.persistSession(session); err != nil {
 		return fmt.Errorf("failed to persist session: %v", err)
