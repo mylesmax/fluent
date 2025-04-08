@@ -38,6 +38,7 @@ ref/
 
 # db
 .fluent/
+.*/
 backend/*.md
 
 # secret

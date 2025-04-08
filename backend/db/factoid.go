@@ -26,13 +26,51 @@ type FactoidData struct {
 	LastReview               time.Time `json:"last_review"`
 	NextReview               time.Time `json:"next_review"`
 	Stability                float64   `json:"stability"`
+	Repetitions              int       `json:"repetitions"`
+	EaseFactor               float64   `json:"ease_factor"`
+	Interval                 int       `json:"interval"`
 	CreatedAt                time.Time `json:"created_at"`
 }
 
 func CalculateNextReview(stability float64) time.Time {
-	//TODO
-	//comp. using stability for now, use FSRS later
-	return time.Now()
+	daysToAdd := int(stability)
+	if daysToAdd < 1 {
+		daysToAdd = 1
+	}
+
+	return time.Now().AddDate(0, 0, daysToAdd)
+}
+
+// SuperMemo 2 algorithm for spaced repetition
+func SM2Algorithm(quality int, factoid *FactoidData) {
+	if factoid.EaseFactor == 0 {
+		factoid.EaseFactor = 2.5
+	}
+
+	if quality >= 3 {
+		if factoid.Repetitions == 0 {
+			factoid.Interval = 1
+		} else if factoid.Repetitions == 1 {
+			factoid.Interval = 6
+		} else {
+			factoid.Interval = int(float64(factoid.Interval) * factoid.EaseFactor)
+		}
+
+		factoid.Repetitions++
+
+		factoid.EaseFactor = factoid.EaseFactor + (0.1 - float64(5-quality)*(0.08+float64(5-quality)*0.02))
+	} else {
+		factoid.Repetitions = 0
+		factoid.Interval = 1
+	}
+
+	if factoid.EaseFactor < 1.3 {
+		factoid.EaseFactor = 1.3
+	}
+
+	factoid.NextReview = time.Now().AddDate(0, 0, factoid.Interval)
+	factoid.LastReview = time.Now()
+	factoid.Stability = factoid.EaseFactor
 }
 
 // save an array of factoids to the db
@@ -65,6 +103,9 @@ func StoreFactoids(classUUID string, sessionID string, factoidsJSON string) erro
 			last_review TIMESTAMP NOT NULL,
 			next_review TIMESTAMP NOT NULL,
 			stability REAL NOT NULL,
+			repetitions INTEGER NOT NULL DEFAULT 0,
+			ease_factor REAL NOT NULL DEFAULT 2.5,
+			interval INTEGER NOT NULL DEFAULT 0,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -92,8 +133,9 @@ func StoreFactoids(classUUID string, sessionID string, factoidsJSON string) erro
 	stmt, err := tx.Prepare(`
 		INSERT INTO factoids 
 		(id, session_id, question, answer, type, verbatim, context, requires_clarification, 
-		alternative_subjects_count, difficulty, examples, last_review, next_review, stability)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+		alternative_subjects_count, difficulty, examples, last_review, next_review, stability,
+		repetitions, ease_factor, interval)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`)
 	if err != nil {
 		tx.Rollback()
@@ -115,7 +157,9 @@ func StoreFactoids(classUUID string, sessionID string, factoidsJSON string) erro
 		if f.Stability == 0 {
 			f.Stability = 1.0//default stability
 		}
-
+		if f.EaseFactor == 0 {
+			f.EaseFactor = 2.5 //default ease factor
+		}
 		if f.Difficulty == 0 {
 			f.Difficulty = 3//middle difficulty
 		}
@@ -141,6 +185,9 @@ func StoreFactoids(classUUID string, sessionID string, factoidsJSON string) erro
 			f.LastReview,
 			f.NextReview,
 			f.Stability,
+			f.Repetitions,
+			f.EaseFactor,
+			f.Interval,
 		)
 		if err != nil {
 			tx.Rollback()
@@ -171,7 +218,8 @@ func GetFactoids(classUUID string) ([]FactoidData, error) {
 
 	rows, err := classDB.Query(`
 		SELECT id, session_id, question, answer, type, verbatim, context, requires_clarification,
-		       alternative_subjects_count, difficulty, examples, last_review, next_review, stability, created_at
+		       alternative_subjects_count, difficulty, examples, last_review, next_review, stability, 
+		       repetitions, ease_factor, interval, created_at
 		FROM factoids
 		ORDER BY created_at DESC;
 	`)
@@ -201,6 +249,9 @@ func GetFactoids(classUUID string) ([]FactoidData, error) {
 			&f.LastReview,
 			&f.NextReview,
 			&f.Stability,
+			&f.Repetitions,
+			&f.EaseFactor,
+			&f.Interval,
 			&f.CreatedAt,
 		)
 		if err != nil {
@@ -235,7 +286,8 @@ func GetDueFactoids(classUUID string) ([]FactoidData, error) {
 	now := time.Now()
 	rows, err := classDB.Query(`
 		SELECT id, session_id, question, answer, type, verbatim, context, requires_clarification,
-		       alternative_subjects_count, difficulty, examples, last_review, next_review, stability, created_at
+		       alternative_subjects_count, difficulty, examples, last_review, next_review, stability,
+		       repetitions, ease_factor, interval, created_at
 		FROM factoids
 		WHERE next_review <= ?
 		ORDER BY next_review;
@@ -266,6 +318,9 @@ func GetDueFactoids(classUUID string) ([]FactoidData, error) {
 			&f.LastReview,
 			&f.NextReview,
 			&f.Stability,
+			&f.Repetitions,
+			&f.EaseFactor,
+			&f.Interval,
 			&f.CreatedAt,
 		)
 		if err != nil {
@@ -297,14 +352,53 @@ func UpdateFactoidReview(factoidID string, classUUID string, rating int, newStab
 	}
 	defer classDB.Close()
 
-	now := time.Now()
+	var factoid FactoidData
+	var sessionID string
+	var examplesJSON string
+
+	err = classDB.QueryRow(`
+		SELECT id, session_id, question, answer, type, verbatim, context, requires_clarification,
+		       alternative_subjects_count, difficulty, examples, last_review, next_review, stability,
+		       repetitions, ease_factor, interval, created_at
+		FROM factoids
+		WHERE id = ?
+	`, factoidID).Scan(
+		&factoid.ID,
+		&sessionID,
+		&factoid.Question,
+		&factoid.Answer,
+		&factoid.Type,
+		&factoid.Verbatim,
+		&factoid.Context,
+		&factoid.RequiresClarification,
+		&factoid.AlternativeSubjectsCount,
+		&factoid.Difficulty,
+		&examplesJSON,
+		&factoid.LastReview,
+		&factoid.NextReview,
+		&factoid.Stability,
+		&factoid.Repetitions,
+		&factoid.EaseFactor,
+		&factoid.Interval,
+		&factoid.CreatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to retrieve factoid for review update: %v", err)
+	}
+
+	SM2Algorithm(rating, &factoid)
+
 	_, err = classDB.Exec(`
 		UPDATE factoids
 		SET last_review = ?,
 		    next_review = ?,
-		    stability = ?
+		    stability = ?,
+		    repetitions = ?,
+		    ease_factor = ?,
+		    interval = ?
 		WHERE id = ?;
-	`, now, newNextReview, newStability, factoidID)
+	`, factoid.LastReview, factoid.NextReview, factoid.Stability, factoid.Repetitions, factoid.EaseFactor, factoid.Interval, factoidID)
 
 	if err != nil {
 		return fmt.Errorf("failed to update factoid review: %v", err)
@@ -343,6 +437,9 @@ func StoreFactoid(classUUID string, factoid FactoidData) (string, error) {
 			last_review TIMESTAMP NOT NULL,
 			next_review TIMESTAMP NOT NULL,
 			stability REAL NOT NULL,
+			repetitions INTEGER NOT NULL DEFAULT 0,
+			ease_factor REAL NOT NULL DEFAULT 2.5,
+			interval INTEGER NOT NULL DEFAULT 0,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -367,6 +464,10 @@ func StoreFactoid(classUUID string, factoid FactoidData) (string, error) {
 		factoid.Stability = 1.0 // default stability
 	}
 
+	if factoid.EaseFactor == 0 {
+		factoid.EaseFactor = 2.5 // default ease factor
+	}
+
 	if factoid.Difficulty == 0 {
 		factoid.Difficulty = 3 // middle difficulty
 	}
@@ -380,8 +481,9 @@ func StoreFactoid(classUUID string, factoid FactoidData) (string, error) {
 	_, err = classDB.Exec(`
 		INSERT INTO factoids 
 		(id, session_id, question, answer, type, verbatim, context, requires_clarification, 
-		alternative_subjects_count, difficulty, examples, last_review, next_review, stability)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+		alternative_subjects_count, difficulty, examples, last_review, next_review, stability,
+		repetitions, ease_factor, interval)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`,
 		factoid.ID,
 		sessionID,
@@ -397,6 +499,9 @@ func StoreFactoid(classUUID string, factoid FactoidData) (string, error) {
 		factoid.LastReview,
 		factoid.NextReview,
 		factoid.Stability,
+		factoid.Repetitions,
+		factoid.EaseFactor,
+		factoid.Interval,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert factoid: %v", err)

@@ -137,23 +137,7 @@ func (a *App) GetDueFactoids(classUUID string) ([]db.FactoidData, error) {
 
 // UpdateFactoidReview makes it update, after we already did the review
 func (a *App) UpdateFactoidReview(factoidID string, classUUID string, rating int) error {
-	var newStability float64 //this is a basic spaced repetition algorithm, i will prob replace with FSRS later
-	switch rating {
-	case 5: //perfect
-		newStability = 2.5
-	case 4:
-		newStability = 2.0
-	case 3:
-		newStability = 1.5
-	case 2:
-		newStability = 1.0
-	default: //failed
-		newStability = 0.5
-	}
-
-	nextReview := db.CalculateNextReview(newStability)
-
-	err := db.UpdateFactoidReview(factoidID, classUUID, rating, newStability, nextReview)
+	err := db.UpdateFactoidReview(factoidID, classUUID, rating, 0, time.Time{})
 	if err != nil {
 		runtime.LogError(a.ctx, "Failed to update factoid review: "+err.Error())
 		return err
