@@ -48,3 +48,7 @@ backend/secret/
 
 #tests that are wip
 *_test.go
+
+#presentation stuff
+*.pptx
+speakernotes.md

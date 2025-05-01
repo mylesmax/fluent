@@ -9,6 +9,7 @@ import (
 	"fluent/backend/openai"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -152,11 +153,23 @@ func (a *App) GetProfiles() []db.Profile {
 		runtime.LogError(a.ctx, "faild to get profs: "+err.Error())
 		return []db.Profile{}
 	}
+
+	for i, profile := range profiles {
+		if profile.ClassUUID != "" {
+			factoidCount, err := db.CountAllFactoids(profile.ClassUUID)
+			if err == nil {
+				profiles[i].TotalPossibleDrops = int(math.Max(float64(profile.TotalPossibleDrops),
+					math.Max(float64(profile.CurrentDrops), float64(factoidCount))))
+			}
+		}
+	}
+
 	profiles = append(profiles, db.Profile{
 		Name:         "Add New",
 		Emoji:        "➕",
 		GlowColor:    "rgba(52, 211, 153, 0.5)",
 		CurrentDrops: 0,
+		TotalPossibleDrops: 0,
 	})
 	return profiles
 }
@@ -183,8 +196,12 @@ func (a *App) DeleteProfile(name string) error {
 	return db.DeleteProfile(name)
 }
 
-func (a *App) UpdateDrops(name string, drops int) error {
-	return db.UpdateDrops(name, drops)
+func (a *App) UpdateDrops(name string, drops int, totalPossibleDrops int) error {
+	// totalPossibleDrops cannot be less than drops
+	if totalPossibleDrops < drops {
+		totalPossibleDrops = drops
+	}
+	return db.UpdateDrops(name, drops, totalPossibleDrops)
 }
 
 func (a *App) UpdateProfileGlowColor(name string, newGlowColor string) error {
@@ -290,7 +307,7 @@ func (a *App) ProcessUserMessage(classUUID string, message string) (map[string]i
 				for _, profile := range profiles {
 					if profile.ClassUUID == classUUID {
 						currentDrops := profile.CurrentDrops + 1
-						err := db.UpdateDrops(profile.Name, currentDrops)
+						err := db.UpdateDrops(profile.Name, currentDrops, profile.TotalPossibleDrops)
 						if err != nil {
 							log.Printf("Warning: Failed to update drops for profile %s: %v", profile.Name, err)
 						} else {
@@ -477,9 +494,21 @@ func (a *App) UpdateSessionChatHistory(classUUID string, sessionID string, chatH
 func (a *App) EndSession(classUUID string, sessionID string) error {
 	log.Printf("Ending session %s for class %s", sessionID, classUUID)
 
-	//first, use the ChatMaster to properly end the session in the session file
+	//new chatmaster
 	cm := chatmaster.NewChatMaster(a.openaiClient)
-	err := cm.EndSession(classUUID, sessionID)
+
+	session, err := cm.GetSession(classUUID, sessionID)
+	if err != nil {
+		log.Printf("Error getting session %s: %v", sessionID, err)
+		return fmt.Errorf("failed to get session: %v", err)
+	}
+
+	if session.Status == "completed" {
+		log.Printf("Session %s is already completed, skipping end operation", sessionID)
+		return nil
+	}
+
+	err = cm.EndSession(classUUID, sessionID)
 	if err != nil {
 		runtime.LogError(a.ctx, "Failed to end session via ChatMaster: "+err.Error())
 		//continue anyway to try the database update
@@ -493,7 +522,7 @@ func (a *App) EndSession(classUUID string, sessionID string) error {
 	}
 
 	//get session to confirm it's properly marked as inactive or completed
-	session, err := cm.GetSession(classUUID, sessionID)
+	session, err = cm.GetSession(classUUID, sessionID)
 	if err != nil {
 		runtime.LogError(a.ctx, "Failed to get session after ending it: "+err.Error())
 	} else {
@@ -541,4 +570,22 @@ func (a *App) StartSessionConversation(classUUID string) (string, error) {
 
 	cleanResponse := chatmaster.ExtractResponseContent(response)
 	return cleanResponse, nil
+}
+
+func (a *App) GetTotalFactoidsCount(classUUID string) (int, error) {
+	count, err := db.CountAllFactoids(classUUID)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to count all factoids: "+err.Error())
+		return 0, err
+	}
+	return count, nil
+}
+
+func (a *App) UpdateProfileTotalPossibleDrops(classUUID string) error {
+	err := db.UpdateProfileTotalPossibleDrops(classUUID)
+	if err != nil {
+		runtime.LogError(a.ctx, "Failed to update profile total possible drops: "+err.Error())
+		return err
+	}
+	return nil
 }

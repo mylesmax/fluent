@@ -219,6 +219,9 @@ export namespace db {
 	    // Go type: time
 	    next_review: any;
 	    stability: number;
+	    repetitions: number;
+	    ease_factor: number;
+	    interval: number;
 	    // Go type: time
 	    created_at: any;
 	
@@ -242,6 +245,9 @@ export namespace db {
 	        this.last_review = this.convertValues(source["last_review"], null);
 	        this.next_review = this.convertValues(source["next_review"], null);
 	        this.stability = source["stability"];
+	        this.repetitions = source["repetitions"];
+	        this.ease_factor = source["ease_factor"];
+	        this.interval = source["interval"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	    }
 	
@@ -269,6 +275,7 @@ export namespace db {
 	    emoji: string;
 	    glowColor: string;
 	    currentDrops: number;
+	    totalPossibleDrops: number;
 	    classDBPath: string;
 	    classUUID: string;
 	    isAddNew: boolean;
@@ -286,6 +293,7 @@ export namespace db {
 	        this.emoji = source["emoji"];
 	        this.glowColor = source["glowColor"];
 	        this.currentDrops = source["currentDrops"];
+	        this.totalPossibleDrops = source["totalPossibleDrops"];
 	        this.classDBPath = source["classDBPath"];
 	        this.classUUID = source["classUUID"];
 	        this.isAddNew = source["isAddNew"];

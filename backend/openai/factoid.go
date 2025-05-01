@@ -23,6 +23,9 @@ type Factoid struct {
 	Stability                float64   `json:"stability,omitempty"`        // srs: stability
 	ClassUUID                string    `json:"class_uuid,omitempty"`       // uuid of the class/course/profile
 }
+type FactoidResponse struct {
+	Factoids []Factoid `json:"json"`
+}
 
 func NewFactoid(question, answer, factoidType string, verbatim, context string, requiresClarification bool,
 	alternativeSubjectsCount int, examples []string, classUUID string) *Factoid {
@@ -88,4 +91,26 @@ func (f *Factoid) Validate() error {
 	}
 
 	return nil
+}
+
+func ParseFactoidsFromResponse(rawResponse []byte) ([]Factoid, error) {
+	//parsing the expected structure { "json": [...] }
+	//parsing as a direct array [...]
+	//if fail, return an error
+	var response FactoidResponse
+	errResponse := json.Unmarshal(rawResponse, &response)
+	if errResponse == nil && len(response.Factoids) > 0 {
+		return response.Factoids, nil
+	}
+
+	var directArray []Factoid
+	errDirect := json.Unmarshal(rawResponse, &directArray)
+	if errDirect == nil && len(directArray) > 0 {
+		return directArray, nil
+	}
+
+	return nil, fmt.Errorf("failed to parse factoids from response:\n"+
+		"Tried 'json' field: %v\n"+
+		"Tried direct array: %v\n"+
+		"raw response: %s", errResponse, errDirect, string(rawResponse))
 }

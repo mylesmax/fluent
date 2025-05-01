@@ -17,7 +17,8 @@ import {
     ListSessionsByActivity,
     ResumeSession,
     StartSessionConversation,
-    UpdateDrops
+    UpdateDrops,
+    UpdateProfileTotalPossibleDrops
 } from '../../wailsjs/go/main/App';
 
 const LearnMode = ({ profile, onClose }) => {
@@ -58,23 +59,24 @@ const LearnMode = ({ profile, onClose }) => {
     const animationDuration = 5000;
     
     const [isIntentionalClose, setIsIntentionalClose] = useState(false);
+    const [isSessionEnding, setIsSessionEnding] = useState(false);
     
     const handleCupClick = () => {
         setTriggerShake(prev => prev + 1);
     };
     
     useEffect(() => {
-        if (profile && profile.classUUID) {
-            setCurrentScreen('welcome');
-            
-            ListSessionsByActivity(profile.classUUID)
-                .then(sessions => {
-                    if (sessions && sessions.length > 0) {
-                        setAvailableSessions(sessions);
-                    }
-                })
-                .catch(err => console.error("failed:", err));
-        }
+        if (!profile || !profile.classUUID) return;
+
+        setCurrentScreen(prev => (prev === 'welcome' || prev === 'upload') ? 'welcome' : prev);
+
+        ListSessionsByActivity(profile.classUUID)
+            .then(sessions => {
+                if (sessions && sessions.length > 0) {
+                    setAvailableSessions(sessions);
+                }
+            })
+            .catch(err => console.error("failed:", err));
     }, [profile]);
     
     useEffect(() => {
@@ -383,8 +385,23 @@ const LearnMode = ({ profile, onClose }) => {
                 }, 10);
                 
                 if (profile && profile.name && dropsToAdd > 0) {
-                    UpdateDrops(profile.name, newDropsValue)
-                        .catch(err => console.error("failed to update profile drops:", err));
+                    //master update with local
+                    const newMasterDrops = profile.currentDrops + dropsToAdd;
+                    const newMasterTotalPossible = Math.max(profile.totalPossibleDrops, newMasterDrops);
+                    
+                    console.log("Updating master cup numerator:", {
+                        currentMasterDrops: profile.currentDrops,
+                        dropsToAdd: dropsToAdd,
+                        newMasterDrops: newMasterDrops,
+                        totalPossibleDrops: newMasterTotalPossible
+                    });
+                    
+                    //db
+                    UpdateDrops(profile.name, newMasterDrops, newMasterTotalPossible)
+                        .then(() => {
+                            return UpdateProfileTotalPossibleDrops(profile.classUUID);
+                        })
+                        .catch(err => console.error("Failed to update master cup denominator:", err));
                 }
             }
         };
@@ -495,10 +512,10 @@ const LearnMode = ({ profile, onClose }) => {
         const conversationJSON = JSON.stringify(emptyConversation);
         
         const safetyTimeout = setTimeout(() => {
-            console.log("timeout");
+            console.log("safety timeout – reverting to upload");
             setCurrentScreen('upload');
-            alert("timeout.");
-        }, 30000); //todo:30 seconds for now, change lateR? do this in go??
+            alert("Timed out while processing. Please try again later.");
+        }, 120000);
         
         let isTransitioning = false;//added a flag here becauase it broke soo many times
         
@@ -511,7 +528,8 @@ const LearnMode = ({ profile, onClose }) => {
                     .catch(err => console.error("failed to record upload history:", err));
                 
                 let checkAttempts = 0;
-                const maxCheckAttempts = 15;//30 sec, 2 sec interval
+                const pollInterval = 1000;
+                const maxCheckAttempts = 30; // up to 30 s total
                 
                 const checkForFactoids = () => {
                     if (isTransitioning) return;
@@ -532,14 +550,33 @@ const LearnMode = ({ profile, onClose }) => {
                                 setSessionStats(stats);
                                 setCurrentDrops(0);
                                 
+                                const totalFactoids = stats.factoids.length;
+                                const masterTotalPossibleDrops = Math.max(
+                                    (profile.totalPossibleDrops || 0) + totalFactoids,
+                                    profile.currentDrops
+                                );
+                                
+                                console.log("Updating master cup denominator:", {
+                                    currentPossibleDrops: profile.totalPossibleDrops || 0,
+                                    sessionFactoids: totalFactoids,
+                                    profileCurrentDrops: profile.currentDrops,
+                                    newTotalPossibleDrops: masterTotalPossibleDrops
+                                });
+                                
+                                UpdateDrops(profile.name, profile.currentDrops, masterTotalPossibleDrops)
+                                    .then(() => {
+                                        return UpdateProfileTotalPossibleDrops(profile.classUUID);
+                                    })
+                                    .catch(err => console.error("Failed to update master cup denominator:", err));
+                                
                                 setLastKnownDropsAwarded(stats.drops_awarded || 0);
                                 
                                 setIsAITyping(true);
                                 
                                 const welcomeMessage = { 
                                     role: 'ai', 
-                                    content: `welcome to your learning session on ${profile.name}. les get fluent` 
-                                };
+                                    content: `Welcome to ${profile.name}! Let's get Fluent!` 
+                                };//make more professional for presentation
                                 setConversation([welcomeMessage]);
                                 
                                 setCurrentScreen('chat');
@@ -580,7 +617,7 @@ const LearnMode = ({ profile, onClose }) => {
                                         setIsAITyping(false);
                                     });
                             } else if (checkAttempts < maxCheckAttempts) {
-                                setTimeout(checkForFactoids, 2000);
+                                setTimeout(checkForFactoids, pollInterval);
                             } else {
                                 console.log("Max check attempts reached, proceeding with fallback...");
                                 isTransitioning = true;
@@ -622,11 +659,10 @@ const LearnMode = ({ profile, onClose }) => {
                         .catch(err => {
                             console.error("Failed to get session statistics:", err);
                             if (checkAttempts < maxCheckAttempts) {
-                                setTimeout(checkForFactoids, 2000);
+                                setTimeout(checkForFactoids, pollInterval);
                             } else {
                                 clearTimeout(safetyTimeout);
-                                alert("Failed to process content. Please try again or use a different text.");
-                                setCurrentScreen('upload');
+                                alert("Failed to process content after multiple attempts. Please try again or use a different text.");
                             }
                         });
                 };
@@ -728,7 +764,14 @@ const LearnMode = ({ profile, onClose }) => {
                     }, 50);
                     
                     if (profile && profile.name) {
-                        UpdateDrops(profile.name, finalDropCount)
+                        const newMasterTotalPossible = Math.max(profile.totalPossibleDrops, finalDropCount);
+                        
+                        UpdateDrops(profile.name, finalDropCount, newMasterTotalPossible)
+                            .then(() => {
+                                if (profile && profile.classUUID) {
+                                    return UpdateProfileTotalPossibleDrops(profile.classUUID);
+                                }
+                            })
                             .catch(err => console.error("failed to update profile drops:", err));
                     }
                     
@@ -1097,6 +1140,24 @@ const LearnMode = ({ profile, onClose }) => {
 
     const handleBackClick = () => {
         setIsIntentionalClose(true);
+        
+        if (sessionId && !isSessionEnding) {
+            setIsSessionEnding(true);
+            console.log("ending session on back click:", sessionId);
+            EndSession(profile.classUUID, sessionId)
+                .then(() => {
+                    if (profile && profile.classUUID) {
+                        return UpdateProfileTotalPossibleDrops(profile.classUUID);
+                    }
+                })
+                .catch(err => console.error("failed to end session:", err));
+        }
+        
+        if (profile && profile.classUUID) {
+            UpdateProfileTotalPossibleDrops(profile.classUUID)
+                .catch(err => console.error("Failed to update total possible drops on exit:", err));
+        }
+        
         setTimeout(() => {
             onClose();
         }, 100);
@@ -1104,13 +1165,19 @@ const LearnMode = ({ profile, onClose }) => {
 
     useEffect(() => {
         return () => {
-            if (sessionId && (isIntentionalClose || currentScreen === 'chat')) {
+            if (sessionId && !isSessionEnding && (isIntentionalClose || currentScreen === 'chat')) {
                 console.log("ending session on component unmount:", sessionId);
+                setIsSessionEnding(true);
                 EndSession(profile.classUUID, sessionId)
+                    .then(() => {
+                        if (profile && profile.classUUID) {
+                            return UpdateProfileTotalPossibleDrops(profile.classUUID);
+                        }
+                    })
                     .catch(err => console.error("failed to end session:", err));
             }
         };
-    }, [sessionId, profile.classUUID, isIntentionalClose, currentScreen]);
+    }, [sessionId, profile.classUUID, isIntentionalClose, currentScreen, isSessionEnding]);
 
     return (
         <div className={`learn-mode-window ${currentScreen === 'welcome' ? 'fullscreen' : ''}`}>

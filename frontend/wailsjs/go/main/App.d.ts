@@ -22,6 +22,8 @@ export function GetProfiles():Promise<Array<db.Profile>>;
 
 export function GetSessionStatistics(arg1:string,arg2:string):Promise<{[key: string]: any}>;
 
+export function GetTotalFactoidsCount(arg1:string):Promise<number>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function ListSessionsByActivity(arg1:string):Promise<Array<string>>;
@@ -40,12 +42,14 @@ export function ResumeSession(arg1:string,arg2:string):Promise<void>;
 
 export function StartSessionConversation(arg1:string):Promise<string>;
 
-export function UpdateDrops(arg1:string,arg2:number):Promise<void>;
+export function UpdateDrops(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function UpdateFactoidReview(arg1:string,arg2:string,arg3:number):Promise<void>;
 
 export function UpdateProfileGlowColor(arg1:string,arg2:string):Promise<void>;
 
 export function UpdateProfileName(arg1:string,arg2:string):Promise<void>;
+
+export function UpdateProfileTotalPossibleDrops(arg1:string):Promise<void>;
 
 export function UpdateSessionChatHistory(arg1:string,arg2:string,arg3:string):Promise<void>;

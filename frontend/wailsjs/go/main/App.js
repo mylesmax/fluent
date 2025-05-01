@@ -42,6 +42,10 @@ export function GetSessionStatistics(arg1, arg2) {
   return window['go']['main']['App']['GetSessionStatistics'](arg1, arg2);
 }
 
+export function GetTotalFactoidsCount(arg1) {
+  return window['go']['main']['App']['GetTotalFactoidsCount'](arg1);
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
@@ -78,8 +82,8 @@ export function StartSessionConversation(arg1) {
   return window['go']['main']['App']['StartSessionConversation'](arg1);
 }
 
-export function UpdateDrops(arg1, arg2) {
-  return window['go']['main']['App']['UpdateDrops'](arg1, arg2);
+export function UpdateDrops(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateDrops'](arg1, arg2, arg3);
 }
 
 export function UpdateFactoidReview(arg1, arg2, arg3) {
@@ -92,6 +96,10 @@ export function UpdateProfileGlowColor(arg1, arg2) {
 
 export function UpdateProfileName(arg1, arg2) {
   return window['go']['main']['App']['UpdateProfileName'](arg1, arg2);
+}
+
+export function UpdateProfileTotalPossibleDrops(arg1) {
+  return window['go']['main']['App']['UpdateProfileTotalPossibleDrops'](arg1);
 }
 
 export function UpdateSessionChatHistory(arg1, arg2, arg3) {

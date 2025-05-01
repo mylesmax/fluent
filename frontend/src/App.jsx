@@ -27,8 +27,15 @@ function App() {
         const timer = setTimeout(() => {
             setIsTransitioning(true);
         }, 2000);
+        
 
-        return () => clearTimeout(timer);
+        //refresh
+        const profileRefreshInterval = setInterval(loadProfiles, 3000);
+
+        return () => {
+            clearTimeout(timer);
+            clearInterval(profileRefreshInterval);
+        };
     }, []);
 
     const loadProfiles = async () => {
@@ -95,6 +102,7 @@ function App() {
                 emoji: newClass.emoji,
                 glowColor: newClass.glowColor,
                 currentDrops: 0,
+                totalPossibleDrops: 0,
                 isAddNew: false
             });
             await loadProfiles();

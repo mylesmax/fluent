@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import './Cup.css';
 
-const Cup = () => {
+const Cup = ({ currentDrops, maxDrops }) => {
     const canvasRef = useRef(null);
     const [isGolden, setIsGolden] = useState(false);
-    const [currentDrops, setCurrentDrops] = useState(30);
-    const [maxDrops, setMaxDrops] = useState(50);
+    //should be a reflection of real drops not just placeholders anymore, but default 50/30 lol
     const [ripples, setRipples] = useState([]);
     const [goldParticles, setGoldParticles] = useState([]);
     const [isShaking, setIsShaking] = useState(false);
@@ -13,6 +12,9 @@ const Cup = () => {
     const animationFrameRef = useRef();
     const shakeStartTimeRef = useRef(0);
     const cupInfoRef = useRef(null);
+    
+    const drops = currentDrops !== undefined ? currentDrops : 30;
+    const totalDrops = maxDrops !== undefined ? maxDrops : 50;
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -198,7 +200,7 @@ const Cup = () => {
                 ctx.translate(-cupWidth / 2, -cupHeight / 2);
             }
 
-            const waterHeight = 80 * (currentDrops / maxDrops);
+            const waterHeight = 80 * (drops / totalDrops);
             drawShimmeringWater(ctx, 22, 100 - waterHeight, 76, waterHeight);
 
             //ripples
@@ -270,7 +272,7 @@ const Cup = () => {
                 cancelAnimationFrame(animationFrameRef.current);
             }
         };
-    }, [currentDrops, maxDrops, isGolden, ripples, goldParticles, isShaking]);
+    }, [drops, totalDrops, isGolden, ripples, goldParticles, isShaking]);
 
     const shake = () => {
         if (!isShaking) {
@@ -280,7 +282,7 @@ const Cup = () => {
             const addShakeRipples = () => {
                 if (Math.random() < 0.3) {
                     const x = 22 + Math.random() * 76;
-                    const y = 100 - 80 * (currentDrops / maxDrops);
+                    const y = 100 - 80 * (drops / totalDrops);
                     setRipples(prevRipples => [
                         ...prevRipples,
                         {
@@ -322,10 +324,10 @@ const Cup = () => {
 
     useEffect(() => {
         if (cupInfoRef.current) {
-            cupInfoRef.current.textContent = isHovering ? `${currentDrops}/${maxDrops}` : '';
+            cupInfoRef.current.textContent = isHovering ? `${drops}/${totalDrops}` : '';
             cupInfoRef.current.className = isHovering ? (isGolden ? 'visible golden' : 'visible') : '';
         }
-    }, [isHovering, currentDrops, maxDrops, isGolden]);
+    }, [isHovering, drops, totalDrops, isGolden]);
 
     const lerpColor = (color1, color2, amount) => {
         const parseColor = (color) => {

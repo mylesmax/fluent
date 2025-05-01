@@ -27,6 +27,7 @@ type Profile struct {
 	Emoji        string   `json:"emoji"`
 	GlowColor    string   `json:"glowColor"`
 	CurrentDrops int      `json:"currentDrops"`
+	TotalPossibleDrops int      `json:"totalPossibleDrops"`
 	ClassDBPath  string   `json:"classDBPath"`
 	ClassUUID    string   `json:"classUUID"`
 	IsAddNew     bool     `json:"isAddNew"`
@@ -127,12 +128,20 @@ func createClassDB(classDBPath string, classUUID string, initialName string) err
 			last_review TIMESTAMP,
 			next_review TIMESTAMP,
 			stability REAL DEFAULT 1.0,
+			repetitions INTEGER NOT NULL DEFAULT 0,
+			ease_factor REAL NOT NULL DEFAULT 2.5,
+			interval INTEGER NOT NULL DEFAULT 0,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to create factoids table: %v", err)
 	}
+
+	// add missing columns if upgrading existing DB (ignore errors)
+	_, _ = classDB.Exec(`ALTER TABLE factoids ADD COLUMN repetitions INTEGER NOT NULL DEFAULT 0;`)
+	_, _ = classDB.Exec(`ALTER TABLE factoids ADD COLUMN ease_factor REAL NOT NULL DEFAULT 2.5;`)
+	_, _ = classDB.Exec(`ALTER TABLE factoids ADD COLUMN interval INTEGER NOT NULL DEFAULT 0;`)
 
 	nameHistory := []string{initialName}
 	nameHistoryJSON, err := json.Marshal(nameHistory)
@@ -221,6 +230,7 @@ func InitDB() (*sql.DB, error) {
 			emoji TEXT,
 			glow_color TEXT,
 			current_drops INTEGER DEFAULT 0,
+			total_possible_drops INTEGER DEFAULT 0,
 			class_db_path TEXT,
 			class_uuid TEXT,
 			is_add_new INTEGER DEFAULT 0,
@@ -238,6 +248,16 @@ func InitDB() (*sql.DB, error) {
 
 	if err := FixExistingClassDatabases(); err != nil {
 		log.Printf("warning: error fixing some class databases: %v", err)
+	}
+
+	//FIX: ensure total_possible_drops is not less than current_drops
+	_, err = db.Exec(`
+		UPDATE profiles 
+		SET total_possible_drops = current_drops 
+		WHERE total_possible_drops < current_drops OR total_possible_drops IS NULL
+	`)
+	if err != nil {
+		log.Printf("warning: failed to update total_possible_drops on existing profiles: %v", err)
 	}
 
 	return db, err
@@ -299,12 +319,20 @@ func initClassDatabases() error {
 				last_review TIMESTAMP,
 				next_review TIMESTAMP,
 				stability REAL DEFAULT 1.0,
+				repetitions INTEGER NOT NULL DEFAULT 0,
+				ease_factor REAL NOT NULL DEFAULT 2.5,
+				interval INTEGER NOT NULL DEFAULT 0,
 				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 			);
 		`)
 		if err != nil {
 			log.Printf("Error creating factoids table for class %s: %v", classUUID, err)
 		}
+
+		// run migrations to add new columns if missing, ignore errors
+		_, _ = classDB.Exec(`ALTER TABLE factoids ADD COLUMN repetitions INTEGER NOT NULL DEFAULT 0;`)
+		_, _ = classDB.Exec(`ALTER TABLE factoids ADD COLUMN ease_factor REAL NOT NULL DEFAULT 2.5;`)
+		_, _ = classDB.Exec(`ALTER TABLE factoids ADD COLUMN interval INTEGER NOT NULL DEFAULT 0;`)
 
 		_, err = classDB.Exec(`
 			CREATE TABLE IF NOT EXISTS class_info (
@@ -364,7 +392,7 @@ func initAIHistoryDatabases() {
 
 func GetProfiles() ([]Profile, error) {
 	rows, err := db.Query(`
-		SELECT id, name, emoji, glow_color, current_drops, class_db_path, class_uuid, is_add_new, active
+		SELECT id, name, emoji, glow_color, current_drops, total_possible_drops, class_db_path, class_uuid, is_add_new, active
 		FROM profiles 
 		WHERE is_add_new = 0 AND active = 1
 		ORDER BY id
@@ -377,7 +405,7 @@ func GetProfiles() ([]Profile, error) {
 	var profiles []Profile
 	for rows.Next() {
 		var p Profile
-		err := rows.Scan(&p.ID, &p.Name, &p.Emoji, &p.GlowColor, &p.CurrentDrops, &p.ClassDBPath, &p.ClassUUID, &p.IsAddNew, &p.Active)
+		err := rows.Scan(&p.ID, &p.Name, &p.Emoji, &p.GlowColor, &p.CurrentDrops, &p.TotalPossibleDrops, &p.ClassDBPath, &p.ClassUUID, &p.IsAddNew, &p.Active)
 		if err != nil {
 			return nil, err
 		}
@@ -413,18 +441,18 @@ func AddProfile(profile Profile) error {
 	}
 
 	_, err = db.Exec(`
-		INSERT INTO profiles (name, emoji, glow_color, current_drops, class_db_path, class_uuid, is_add_new, active)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-	`, profile.Name, profile.Emoji, profile.GlowColor, profile.CurrentDrops, classDBPath, classUUID, profile.IsAddNew)
+		INSERT INTO profiles (name, emoji, glow_color, current_drops, total_possible_drops, class_db_path, class_uuid, is_add_new, active)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+	`, profile.Name, profile.Emoji, profile.GlowColor, profile.CurrentDrops, profile.TotalPossibleDrops, classDBPath, classUUID, profile.IsAddNew)
 	return err
 }
 
 func UpdateProfile(profile Profile) error {
 	_, err := db.Exec(`
 		UPDATE profiles 
-		SET name = ?, emoji = ?, glow_color = ?, current_drops = ?
+		SET name = ?, emoji = ?, glow_color = ?, current_drops = ?, total_possible_drops = ?
 		WHERE id = ?
-	`, profile.Name, profile.Emoji, profile.GlowColor, profile.CurrentDrops, profile.ID)
+	`, profile.Name, profile.Emoji, profile.GlowColor, profile.CurrentDrops, profile.TotalPossibleDrops, profile.ID)
 	return err
 }
 
@@ -493,12 +521,12 @@ func DeleteProfile(name string) error {
 	return err
 }
 
-func UpdateDrops(name string, drops int) error {
+func UpdateDrops(name string, drops int, totalPossibleDrops int) error {
 	_, err := db.Exec(`
 		UPDATE profiles 
-		SET current_drops = ?
+		SET current_drops = ?, total_possible_drops = ?
 		WHERE name = ?
-	`, drops, name)
+	`, drops, totalPossibleDrops, name)
 	return err
 }
 
@@ -806,4 +834,67 @@ func GetFactoid(classUUID, factoidID string) (FactoidData, error) {
 	}
 
 	return factoid, nil
+}
+
+func CountAllFactoids(classUUID string) (int, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get home directory: %v", err)
+	}
+
+	classDBPath := filepath.Join(homeDir, ".fluent", "class", classUUID+".db")
+
+	if _, err := os.Stat(classDBPath); os.IsNotExist(err) {
+		return 0, nil
+	}
+
+	classDB, err := sql.Open("sqlite3", classDBPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to open class database: %v", err)
+	}
+	defer classDB.Close()
+
+	var tableExists bool
+	err = classDB.QueryRow(`
+		SELECT COUNT(*) > 0 
+		FROM sqlite_master 
+		WHERE type='table' AND name='factoids'
+	`).Scan(&tableExists)
+	if err != nil || !tableExists {
+		return 0, nil
+	}
+
+	var count int
+	err = classDB.QueryRow("SELECT COUNT(*) FROM factoids").Scan(&count)
+	if err != nil {
+		return 0, nil
+	}
+
+	return count, nil
+}
+
+func UpdateProfileTotalPossibleDrops(classUUID string) error {
+	count, err := CountAllFactoids(classUUID)
+	if err != nil {
+		return fmt.Errorf("failed to count factoids: %v", err)
+	}
+
+	var currentDrops int
+	err = db.QueryRow("SELECT current_drops FROM profiles WHERE class_uuid = ?", classUUID).Scan(&currentDrops)
+	if err != nil {
+		return fmt.Errorf("failed to get current_drops: %v", err)
+	}
+
+	totalPossibleDrops := count
+	if currentDrops > totalPossibleDrops {
+		totalPossibleDrops = currentDrops
+	}
+
+	_, err = db.Exec(`
+		UPDATE profiles 
+		SET total_possible_drops = ? 
+		WHERE class_uuid = ?
+	`, totalPossibleDrops, classUUID)
+
+	return err
 }
