@@ -15,7 +15,7 @@ Fluent is a lightweight desktop application that revolutionizes how you learn. B
 ![Fluent Interface](/sample/landingLight.jpg)
 
 ## Getting Started
-In progress!
+Run the *Fluent* executable in the Final Deliverables folder!
 
 ## Built With
 
